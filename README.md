@@ -22,3 +22,16 @@ In its current state, ``map_maker_iterative`` accesses the (large volume of) BLA
   - We can begin porting our mapmaking code to the .g3 format
   - We can experiment with pipelines and various ways to improve performance
 - We can also create synthetic .g3 files with more data to determine performance characteristics of the mapmaker (i.e., how does time/space scale with number of detectors or downsampling rate?)
+
+## Goals
+
+- We want this sample .g3 data to be as close as possible to the format we will get for CCAT
+  - The closer it is, the lower the cost will be once we transition from BLAST-TNG .g3 data to real CCAT data.
+  - Communicating with DAQ team will help establish parity between the formats
+- It would be helpful to have several different forms/versions of .g3 sample data
+  - Various data rates/file sizes due to different number of detectors
+  - Could duplicate detectors to create more data, or just add garbage data for performance testing purposes
+    - duplicating data may lead to inaccurate performance results if some optimizations cause unnatural speedups
+- Provide adequate documentation (slides, READMEs, code comments, docstrings…) such that somebody in the future can:
+  - Create new .g3 files with different data
+  - Understand the format of the existing BLAST-TNG .g3 files and work with them
