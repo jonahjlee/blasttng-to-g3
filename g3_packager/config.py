@@ -6,7 +6,10 @@
 # Configuration file for loading and exporting of BLAST-TNG .g3 data.
 # ============================================================================ #
 
-g3_dir = ""
+# output directory in CCAT control computer
+g3_dir = "/media/player1/blast2020fc1/blasttng_g3"
+
+version_dir = "testing"
 
 # base data directories
 dir_root   = '/media/player1/blast2020fc1/fc1/'   # control computer
