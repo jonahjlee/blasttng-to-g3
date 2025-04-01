@@ -8,8 +8,22 @@ In particular, descriptions are provided for:
 
 Note: The data format is a work in progress and is subject to change
 
+
 ## Folder Structure
-TBD
+
+Because data processing of ``.g3`` files will often involve processing multiple g3 files,
+BLAST-TNG's RCW-92 observation data may be split across multiple files as shown below.
+In any case, since several variations of the test files will be created, any given set of outputs should
+be arranged in a directory with a descriptive version name.
+
+```
+g3_dir
+└── <data_version>
+    ├── pass_1.g3
+    ├── pass_2.g3
+    └── pass_3.g3
+```
+
 
 ## Frames
 
@@ -34,5 +48,7 @@ TBD
 - [EndProcessing](https://cmb-s4.github.io/spt3g_software/frames.html#endprocessing) Frames
   - EndProcessing frames are added automatically by G3Pipeline.
 
+
 ## Keys / Frame Objects
+
 TBD
