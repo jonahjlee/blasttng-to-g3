@@ -10,10 +10,10 @@
 # ============================================================================ #
 
 import numpy as np
-from config import (ScanPass, slice_i_dict, pass_indices, dir_roach_dict,
+from .config import (ScanPass, slice_i_dict, pass_indices, dir_roach_dict,
                     dir_targ_dict, dir_master, source_name, RoachID,
                     kid_ref_dict, kid_max_dict, file_rejects_dict)
-import data_lib as dlib
+from data_loader import data_lib as dlib
 
 
 class RoachPass:
