@@ -1,7 +1,8 @@
 # ============================================================================ #
-# mmi_data_lib.py
+# data_lib.py
 #
-# James Burgoyne jburgoyne@phas.ubc.ca 
+# James Burgoyne jburgoyne@phas.ubc.ca
+# Modified by Jonah Lee
 # CCAT Prime 2024
 #
 # Map Maker Iterative data library.
