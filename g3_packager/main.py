@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
     class ScanFrameGenerator(core.G3Module):
         def __init__(self, roach_ids: tuple[int]=None):
-            self.roach_ids: tuple[int] = roach_ids if self.roach_ids is not None else (1, 2, 3, 4, 5)
+            self.roach_ids: tuple[int] = roach_ids if roach_ids is not None else (1, 2, 3, 4, 5)
             self.roaches: dict = self._load_roaches()
 
         def _load_roaches(self):
