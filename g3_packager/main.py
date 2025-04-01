@@ -31,6 +31,7 @@ if __name__ == '__main__':
             return roaches
 
         def Process(self, frame):
+            # append a new scan frame
             return [frame, core.G3Frame(core.G3FrameType.Scan)]
 
     out_dir = os.path.join(config.g3_dir, config.version_dir)
