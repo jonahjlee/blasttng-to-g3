@@ -6,7 +6,7 @@
 # Entry point for compilation of .g3 data
 # ============================================================================ #
 
-from data_loader import config, dlib, RoachPass, RoachID, ScanPass
+from ..data_loader import config, dlib, RoachPass, RoachID, ScanPass
 
 from spt3g import core
 import os
