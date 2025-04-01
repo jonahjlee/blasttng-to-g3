@@ -29,7 +29,7 @@ if __name__ == '__main__':
             return roaches
 
         def Process(self, frame):
-            ...
+            return [frame, core.G3Frame(core.G3FrameType.Scan)]
 
     out_dir = os.path.join(config.g3_dir, config.version_dir)
     os.makedirs(out_dir, exist_ok=True)
