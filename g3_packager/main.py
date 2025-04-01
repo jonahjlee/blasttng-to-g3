@@ -31,9 +31,8 @@ if __name__ == '__main__':
             return roaches
 
         def __call__(self, frame):
-            breakpoint()
-            # append a new scan frame
-            return [frame, core.G3Frame(core.G3FrameType.Scan)]
+            out = core.G3Frame(core.G3FrameType.Scan)
+            return out
 
     out_dir = os.path.join(config.g3_dir, config.version_dir)
     os.makedirs(out_dir, exist_ok=True)
