@@ -51,4 +51,16 @@ TBD
 
 ## Keys / Frame Objects
 
-TBD
+As mentioned in Scan Frames, the [CCAT rfsoc-streamer README](https://github.com/ccatobs/rfsoc-streamer/blob/main/README.md)
+lists the keys present in CCAT scan frames. In order to create parity with the CCAT [rfsoc-streamer](https://github.com/ccatobs/rfsoc-streamer) outputs,
+Timestream data will be stored under the ``"data"`` key in a G3SuperTimestream (from [so3g](https://so3g.readthedocs.io/en/latest/)).
+
+The minimum timestream data that must be present in the G3SuperTimestream for map-making is:
+- Time
+- Site Location
+- Boresight Az/El
+- Detector Offsets
+- Detector I / Q raw timestreams
+- Calibration Lamp Timestamps?
+  - Since calibration for BLAST-TNG will not be done in the same way as CCAT,
+it may make more sense to pre-compute and store calibration lamp DF (delta-frequency) per-detector in a Calibration Frame
