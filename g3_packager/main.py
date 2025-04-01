@@ -31,6 +31,7 @@ if __name__ == '__main__':
             return roaches
 
         def __call__(self, frame):
+            breakpoint()
             # append a new scan frame
             return [frame, core.G3Frame(core.G3FrameType.Scan)]
 
