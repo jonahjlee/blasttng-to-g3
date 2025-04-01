@@ -22,7 +22,7 @@ if __name__ == '__main__':
             self.roaches: dict = self._load_roaches()
 
         def _load_roaches(self):
-            """Loads a RoachPass objet for each Roach ID in self.roaches
+            """Loads a RoachPass objet for each Roach ID in self.roach_ids
 
             Loads all 3 passes by default
             """
