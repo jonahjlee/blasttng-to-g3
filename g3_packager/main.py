@@ -16,7 +16,7 @@ import os
 
 if __name__ == '__main__':
 
-    class ScanFrameGenerator(core.G3Module):
+    class ScanFrameGenerator:
         def __init__(self, roach_ids: tuple[int]=None):
             self.roach_ids: tuple[int] = roach_ids if roach_ids is not None else (1, 2, 3, 4, 5)
             self.roaches: dict = self._load_roaches()
@@ -30,7 +30,7 @@ if __name__ == '__main__':
                        for roach_id in self.roach_ids}
             return roaches
 
-        def Process(self, frame):
+        def __call__(self, frame):
             # append a new scan frame
             return [frame, core.G3Frame(core.G3FrameType.Scan)]
 
