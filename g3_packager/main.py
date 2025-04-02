@@ -86,10 +86,12 @@ class ScanFrameGenerator:
 
         start_i, stop_i = self._get_scan_slice()
 
-        ts = so3g.G3SuperTimestream()
-        ts.names = names
-        ts.times = core.G3VectorTime(times * core.G3Units.s)
-        ts.data = data
+        names = ['time', 'az', 'el', 'lat', 'lon', 'alt', 'i', 'q']
+        times = self.data.get_time(self.ref_roach_id) * core.G3Units.s
+        # see https://so3g.readthedocs.io/en/latest/cpp_objects.html#how-to-work-with-float-arrays
+        quanta = 0.01 * np.ones(len(names))
+
+        ts = so3g.G3SuperTimestream(names, times, data)
 
         return out_frame
 
