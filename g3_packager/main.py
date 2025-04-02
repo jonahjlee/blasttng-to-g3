@@ -7,7 +7,6 @@
 # ============================================================================ #
 
 from data_loader import config
-from data_loader.config import roach_ids
 from data_loader.roach import RoachPass, RoachID, ScanPass
 
 # so3g must be imported before spt3g to avoid segmentation fault
@@ -132,8 +131,6 @@ class ScanFrameGenerator:
         self.scan_idx += 1
         if self.max_scans is not None and self.scan_idx >= self.max_scans:
             self.done = True
-
-        breakpoint()
 
         return out_frame
 
