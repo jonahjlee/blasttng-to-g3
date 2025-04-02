@@ -10,8 +10,9 @@ from data_loader import config
 from data_loader.config import roach_ids
 from data_loader.roach import RoachPass, RoachID, ScanPass
 
-from spt3g import core
+# so3g must be imported before spt3g to avoid segmentation fault
 import so3g
+from spt3g import core
 import numpy as np
 import os
 
