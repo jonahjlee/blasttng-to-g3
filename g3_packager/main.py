@@ -5,7 +5,6 @@
 #
 # Entry point for compilation of .g3 data
 # ============================================================================ #
-from setuptools.command.bdist_egg import scan_module
 
 from data_loader import config
 from data_loader.config import roach_ids
