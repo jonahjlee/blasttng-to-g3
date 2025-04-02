@@ -63,13 +63,15 @@ class BlastData:
         return self.roaches[roach_id].get_kid_q(kid)
 
 class ScanFrameGenerator:
-    def __init__(self, data: BlastData, ref_roach_id: int, scan_seconds: float=3, data_freq: float=476.5):
+    def __init__(self, data: BlastData, ref_roach_id: int,
+                 scan_seconds: float=3, data_freq: float=476.5, max_scans: int=None):
         self.data: BlastData = data
         self.ref_roach_id: id = ref_roach_id
         self.scan_idx: int = 0
         self.scan_seconds: float = scan_seconds
         self.data_freq: float = data_freq
         self.scan_len: int = int(self.scan_seconds * self.data_freq)
+        self.max_scans: int = max_scans
         self.done: bool = False
 
     def _get_scan_slice(self):
@@ -127,6 +129,8 @@ class ScanFrameGenerator:
                 out_frame[key] = ts
 
         self.scan_idx += 1
+        if self.max_scans is not None and self.scan_idx >= self.max_scans:
+            self.done = True
 
         return out_frame
 
@@ -138,7 +142,7 @@ if __name__ == '__main__':
     os.makedirs(out_dir, exist_ok=True)
 
     data = BlastData()
-    generator = ScanFrameGenerator(data)
+    generator = ScanFrameGenerator(data, max_scans=10)
 
     pipe = core.G3Pipeline()
 
