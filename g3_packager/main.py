@@ -44,7 +44,7 @@ if __name__ == '__main__':
     os.makedirs(out_dir, exist_ok=True)
 
     pipe = core.G3Pipeline()
-    generator = ScanFrameGenerator(verbose=True)
+    generator = ScanFrameGenerator()
 
     pipe.Add(generator)
     pipe.Add(core.G3Writer, filename=os.path.join(out_dir, 'testfile.g3'))
