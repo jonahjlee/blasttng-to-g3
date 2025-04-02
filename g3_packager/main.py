@@ -110,8 +110,8 @@ class ScanFrameGenerator:
         out_frame['data'] = self._get_kid_data(slice_i, slice_f)
         out_frame['time'] = core.G3Time.Now()
 
-        t_i = out_frame['data']['time'][0]
-        t_f = out_frame['data']['time'][0]
+        t_i = out_frame['data'].times[0]
+        t_f = out_frame['data'].times[-1]
 
         data_funcs = {
             "az": BlastData.get_azimuth,
@@ -143,7 +143,8 @@ if __name__ == '__main__':
     out_dir = os.path.join(config.g3_dir, config.version_dir)
     os.makedirs(out_dir, exist_ok=True)
 
-    data = BlastData()
+    # at the moment, the program runs out of memory with all 5 roaches
+    data = BlastData(roach_ids=(1,))
     generator = ScanFrameGenerator(data, 1, max_scans=10)
 
     pipe = core.G3Pipeline()
