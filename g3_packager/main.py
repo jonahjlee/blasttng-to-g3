@@ -128,12 +128,14 @@ class ScanFrameGenerator:
                 ts.stop = t_f
                 out_frame[key] = ts
 
+
         self.scan_idx += 1
         if self.max_scans is not None and self.scan_idx >= self.max_scans:
             self.done = True
 
-        return out_frame
+        breakpoint()
 
+        return out_frame
 
 
 if __name__ == '__main__':
