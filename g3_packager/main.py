@@ -26,7 +26,7 @@ class BlastData:
 
     def __init__(self, roach_ids: tuple[int] = None):
         self.roach_ids: tuple[int] = roach_ids if roach_ids is not None else (1, 2, 3, 4, 5)
-        self.roaches: dict = self._load_roaches()
+        self.roaches: dict[int, RoachPass] = self._load_roaches()
 
     def _load_roaches(self):
         """Loads a RoachPass objet for each Roach ID in self.roach_ids
@@ -38,26 +38,29 @@ class BlastData:
 
         return roaches
 
-    def get_time(self, roach_id):
-        return self.roaches[roach_id].dat_sliced['time']
+    def get_time(self, roach_id) -> np.ndarray:
+        return self.roaches[roach_id].dat_sliced['time'] * core.G3Units.s
 
-    def get_azimuth(self, roach_id):
-        return self.roaches[roach_id].dat_sliced['az']
+    def get_azimuth(self, roach_id) -> np.ndarray:
+        return self.roaches[roach_id].dat_sliced['az'] * core.G3Units.deg
 
-    def get_elevation(self, roach_id):
-        return self.roaches[roach_id].dat_sliced['el']
+    def get_elevation(self, roach_id) -> np.ndarray:
+        return self.roaches[roach_id].dat_sliced['el'] * core.G3Units.deg
 
-    def get_latitude(self, roach_id):
-        return self.roaches[roach_id].dat_sliced['lat']
+    def get_latitude(self, roach_id)  -> np.ndarray:
+        return self.roaches[roach_id].dat_sliced['lat'] * core.G3Units.deg
 
-    def get_longitude(self, roach_id):
-        return self.roaches[roach_id].dat_sliced['lon']
+    def get_longitude(self, roach_id)  -> np.ndarray:
+        return self.roaches[roach_id].dat_sliced['lon'] * core.G3Units.deg
 
-    def get_altitude(self, roach_id):
-        return self.roaches[roach_id].dat_sliced['alt']
+    def get_altitude(self, roach_id)  -> np.ndarray:
+        return self.roaches[roach_id].dat_sliced['alt'] * core.G3Units.m
 
-    def get_kid_i_q(self, roach_id, kid) -> tuple[np.ndarray, np.ndarray]:
-        return self.roaches[roach_id].get_kid_i_q(kid)
+    def get_kid_i(self, roach_id, kid) -> np.ndarray:
+        return self.roaches[roach_id].get_kid_i(kid)
+
+    def get_kid_q(self, roach_id, kid) -> np.ndarray:
+        return self.roaches[roach_id].get_kid_q(kid)
 
 class ScanFrameGenerator:
     def __init__(self, data: BlastData, ref_roach_id: int, scan_seconds: float=3, data_freq: float=476.5):
@@ -78,22 +81,55 @@ class ScanFrameGenerator:
         slice_f = (self.scan_idx + 1) * self.scan_len - 1
         return slice_i, slice_f
 
+    def _get_kid_data(self, start_i, stop_i) -> so3g.G3SuperTimestream:
+        times = self.data.get_time(self.ref_roach_id)[start_i, stop_i]
+        kid_i_q_data = None
+        kid_i_q_names = None
+        for id, roach in self.data.roaches.items():
+            roach_i_names = [f'roach{id}_{kid}' for kid in roach.kids]
+            roach_i = [roach.get_kid_i(kid)[start_i, stop_i] for kid in roach.kids]
+            roach_q_names = [f'roach{id}_{kid}' for kid in roach.kids]
+            roach_q = [roach.get_kid_q(kid)[start_i, stop_i] for kid in roach.kids]
+            kid_i_q_data = np.array(roach_i + roach_q)
+            kid_i_q_names = roach_i_names + roach_q_names
+        # see https://so3g.readthedocs.io/en/latest/cpp_objects.html#how-to-work-with-float-arrays
+        quanta = 0.01 * np.ones(len(kid_i_q_names))
+        ts = so3g.G3SuperTimestream(kid_i_q_names, times, kid_i_q_data, quanta)
+        return ts
+
     def __call__(self, frame):
         if self.done:
             return []
 
         out_frame = core.G3Frame(core.G3FrameType.Scan)
 
-        start_i, stop_i = self._get_scan_slice()
+        slice_i, slice_f = self._get_scan_slice()
 
-        names = ['time', 'az', 'el', 'lat', 'lon', 'alt', 'i', 'q']
-        times = self.data.get_time(self.ref_roach_id) * core.G3Units.s
-        # see https://so3g.readthedocs.io/en/latest/cpp_objects.html#how-to-work-with-float-arrays
-        quanta = 0.01 * np.ones(len(names))
+        out_frame['data'] = self._get_kid_data(slice_i, slice_f)
+        out_frame['time'] = core.G3Time.Now()
 
-        ts = so3g.G3SuperTimestream(names, times, data)
+        t_i = out_frame['data']['time'][0]
+        t_f = out_frame['data']['time'][0]
+
+        data_funcs = {
+            "az": BlastData.get_azimuth,
+            "el": BlastData.get_elevation,
+            "lat": BlastData.get_latitude,
+            "lon": BlastData.get_longitude,
+            "alt": BlastData.get_altitude,
+        }
+
+        for key, func in data_funcs.items():
+            for roach_id in self.data.roach_ids:
+                ts = core.G3Timestream(func(data, roach_id)[slice_i, slice_f])
+                ts.start = t_i
+                ts.stop = t_f
+                out_frame[key] = ts
+
+        self.scan_idx += 1
 
         return out_frame
+
 
 
 if __name__ == '__main__':
