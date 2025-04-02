@@ -88,9 +88,9 @@ class ScanFrameGenerator:
         kid_i_q_data = None
         kid_i_q_names = None
         for id, roach in self.data.roaches.items():
-            roach_i_names = [f'roach{id}_{kid}' for kid in roach.kids]
+            roach_i_names = [f'roach{id}_{kid}_I' for kid in roach.kids]
             roach_i = [roach.get_kid_i(kid)[start_i:stop_i] for kid in roach.kids]
-            roach_q_names = [f'roach{id}_{kid}' for kid in roach.kids]
+            roach_q_names = [f'roach{id}_{kid}_Q' for kid in roach.kids]
             roach_q = [roach.get_kid_q(kid)[start_i:stop_i] for kid in roach.kids]
             kid_i_q_data = np.array(roach_i + roach_q)
             kid_i_q_names = roach_i_names + roach_q_names
