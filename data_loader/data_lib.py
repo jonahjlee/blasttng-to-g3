@@ -173,16 +173,33 @@ def loadKidRejects(file_rejects):
 
 
 # ============================================================================ #
-def loadKIDData(roach, kid, dir_roach) -> tuple[np.memmap, np.memmap]:
-    '''Preps KID I and Q for on-demand loading.
+def loadKIDI(roach, kid, dir_roach) -> np.memmap:
+    '''Preps KID I (in-phase) for on-demand loading.
     '''
 
     I: np.memmap = np.load(dir_roach + f'i_kid{kid}_roach{roach}.npy',
                 allow_pickle=False, mmap_mode='r')
-    Q: np.memmap = np.load(dir_roach + f'q_kid{kid}_roach{roach}.npy',
+
+    return I
+
+# ============================================================================ #
+# ============================================================================ #
+def loadKIDQ(roach, kid, dir_roach) -> np.memmap:
+    '''Preps KID Q (quadrature) for on-demand loading.
+    '''
+
+    Q: np.memmap = np.load(dir_roach + f'i_kid{kid}_roach{roach}.npy',
                 allow_pickle=False, mmap_mode='r')
 
-    return I, Q
+    return Q
+
+
+# ============================================================================ #
+def loadKIDData(roach, kid, dir_roach) -> tuple[np.memmap, np.memmap]:
+    '''Preps KID I and Q for on-demand loading.
+    '''
+
+    return loadKIDI(roach, kid, dir_roach), loadKIDQ(roach, kid, dir_roach)
 
 
 # ============================================================================ #

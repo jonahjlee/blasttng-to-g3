@@ -62,14 +62,21 @@ class RoachPass:
                 f"\n    dir_targ: {self.dir_targ}"
                 f"\n    file_rejects: {self.file_rejects}")
 
-    def get_kid_i_q(self, kid):
-        """Obtain the sliced I and Q data for a given KID in this RoachPass"""
+    def get_kid_i(self, kid):
+        """Obtain the sliced I (in-phase) data for a given KID in this RoachPass"""
         if isinstance(kid, int): kid = f"{kid:04}"
-        i_tod, q_tod = dlib.loadKIDData(self.id, kid, self.dir_roach)
+        i_tod = dlib.loadKIDI(self.id, kid, self.dir_roach)
         # slice and align
         i_sliced = i_tod[self.dat_align_indices[self.slice_i:self.slice_f]]
+        return i_sliced
+
+    def get_kid_q(self, kid):
+        """Obtain the sliced Q (quadrature) data for a given KID in this RoachPass"""
+        if isinstance(kid, int): kid = f"{kid:04}"
+        q_tod = dlib.loadKIDQ(self.id, kid, self.dir_roach)
+        # slice and align
         q_sliced = q_tod[self.dat_align_indices[self.slice_i:self.slice_f]]
-        return i_sliced, q_sliced
+        return q_sliced
 
     def _load_kids(self) -> list[str]:
         # kids to use
