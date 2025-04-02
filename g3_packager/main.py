@@ -84,7 +84,7 @@ class ScanFrameGenerator:
         return slice_i, slice_f
 
     def _get_kid_data(self, start_i, stop_i) -> so3g.G3SuperTimestream:
-        times = self.data.get_time(self.ref_roach_id)[start_i:stop_i]
+        times = core.G3VectorTime(self.data.get_time(self.ref_roach_id)[start_i:stop_i])
         kid_i_q_data = None
         kid_i_q_names = None
         for id, roach in self.data.roaches.items():
