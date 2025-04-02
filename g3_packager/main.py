@@ -144,7 +144,7 @@ if __name__ == '__main__':
     os.makedirs(out_dir, exist_ok=True)
 
     data = BlastData()
-    generator = ScanFrameGenerator(data, max_scans=10)
+    generator = ScanFrameGenerator(data, 1, max_scans=10)
 
     pipe = core.G3Pipeline()
 
