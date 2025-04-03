@@ -145,11 +145,11 @@ class ScanFrameGenerator:
 
         print(f"Generated Scan Frame {self.frame_num}/{self.max_frame_num}")
 
-        self.frame_num += 1
         if ((self.frame_limit is not None and self.frame_num >= self.frame_limit)
                 or (self.frame_num >= self.max_frame_num)):
             # stop when we reach the manually imposed frame_limit or run out of data, whichever comes first
             self.done = True
+        self.frame_num += 1
 
         return out_frame
 
