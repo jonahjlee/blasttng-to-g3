@@ -97,7 +97,7 @@ class ScanFrameGenerator:
         The resulting indices can be used equally in dat_sliced fields or in kid_i_q timestreams.
         """
         slice_i = self.frame_num * self.scan_len
-        slice_f = (self.frame_num + 1) * self.scan_len - 1
+        slice_f = (self.frame_num + 1) * self.scan_len - 1 if self.frame_num < self.max_frame_num else -1
         return slice_i, slice_f
 
     def _get_kid_data(self, start_i, stop_i) -> so3g.G3SuperTimestream:
