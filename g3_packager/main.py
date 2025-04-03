@@ -64,7 +64,7 @@ class BlastData:
 
 class ScanFrameGenerator:
     def __init__(self, data: BlastData, ref_roach_id: int,
-                 scan_seconds: float=3, data_freq: float=476.5, max_frame_num: int=None):
+                 scan_seconds: float=3, data_freq: float=476.5, frame_limit: int=None):
         self.data: BlastData = data
         self.ref_roach_id: id = ref_roach_id
         self.frame_num: int = 0
@@ -72,9 +72,7 @@ class ScanFrameGenerator:
         self.data_freq: float = data_freq
         self.scan_len: int = int(self.scan_seconds * self.data_freq)
         self.max_frame_num: int = self._get_max_frame_num()
-        if max_frame_num is not None:
-            # stop when we reach the provided max_frame_num or run out of data, whichever comes first
-            self.max_frame_num: int =  min(max_frame_num, self.max_frame_num)
+        self.frame_limit: int | None = frame_limit
         self.done: bool = False
 
     def _get_max_frame_num(self):
@@ -148,7 +146,9 @@ class ScanFrameGenerator:
         print(f"Generated Scan Frame {self.frame_num}/{self.max_frame_num}")
 
         self.frame_num += 1
-        if self.max_frame_num is not None and self.frame_num >= self.max_frame_num:
+        if ((self.frame_limit is not None and self.frame_num >= self.frame_limit)
+                or (self.frame_num >= self.max_frame_num)):
+            # stop when we reach the manually imposed frame_limit or run out of data, whichever comes first
             self.done = True
 
         return out_frame
