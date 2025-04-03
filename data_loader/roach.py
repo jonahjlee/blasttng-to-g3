@@ -165,6 +165,10 @@ class RoachPass:
             self._load_master_data()
         return self._dat_sliced
 
+    def __len__(self):
+        # dat_sliced cols & kid i/q data should all have the same length
+        return self.slice_f - self.slice_i
+
 
 if __name__ == '__main__':
     my_roach = RoachPass(RoachID.ROACH_1, ScanPass.ALL)

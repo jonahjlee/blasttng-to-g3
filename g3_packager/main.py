@@ -10,6 +10,7 @@ from data_loader import config
 from data_loader.roach import RoachPass, RoachID, ScanPass
 
 # so3g must be imported before spt3g to avoid segmentation fault
+import math
 import so3g
 from spt3g import core
 import numpy as np
@@ -23,8 +24,9 @@ class BlastData:
     for the purpose of G3 file packaging
     """
 
-    def __init__(self, roach_ids: tuple[int] = None):
+    def __init__(self, roach_ids: tuple[int]=None, scan_pass: ScanPass=None):
         self.roach_ids: tuple[int] = roach_ids if roach_ids is not None else (1, 2, 3, 4, 5)
+        self.scan_pass = scan_pass if scan_pass is not None else ScanPass.ALL
         self.roaches: dict[int, RoachPass] = self._load_roaches()
 
     def _load_roaches(self):
@@ -32,9 +34,8 @@ class BlastData:
 
         Loads all 3 passes by default
         """
-        roaches = {roach_id: RoachPass(RoachID(roach_id), ScanPass.ALL, use_rejects_file=False)
+        roaches = {roach_id: RoachPass(RoachID(roach_id), self.scan_pass, use_rejects_file=False)
                    for roach_id in self.roach_ids}
-
         return roaches
 
     def get_time(self, roach_id) -> np.ndarray:
@@ -63,23 +64,40 @@ class BlastData:
 
 class ScanFrameGenerator:
     def __init__(self, data: BlastData, ref_roach_id: int,
-                 scan_seconds: float=3, data_freq: float=476.5, max_scans: int=None):
+                 scan_seconds: float=3, data_freq: float=476.5, max_frame_num: int=None):
         self.data: BlastData = data
         self.ref_roach_id: id = ref_roach_id
-        self.scan_idx: int = 0
+        self.frame_num: int = 0
         self.scan_seconds: float = scan_seconds
         self.data_freq: float = data_freq
         self.scan_len: int = int(self.scan_seconds * self.data_freq)
-        self.max_scans: int = max_scans
+        self.max_frame_num: int = self._get_max_frame_num()
+        if max_frame_num is not None:
+            # stop when we reach the provided max_frame_num or run out of data, whichever comes first
+            self.max_frame_num: int =  min(max_frame_num, self.max_frame_num)
         self.done: bool = False
+
+    def _get_max_frame_num(self):
+        """Determines the maximum ``frame_num`` given the length of the scan and the length of the data
+
+        ``frame_num`` is zero for the first scan frame and increments for each frame.
+        The last frame, with ``frame_num == max_frame_num`` may have fewer items than ``scan_len``,
+        and will use up the remaining data in the ref_roach's main axis.
+        """
+        num_indices = len(self.data.roaches[self.ref_roach_id])
+        # truncate towards zero since max_frame_num is one less than the total number of frames.
+        # for example, if there are 4.6 frames worth of data, we would have 5 frames
+        # (the fifth being a bit shorter) and max_frame_num would be 5
+        max_frame_num = int(num_indices / self.scan_len)
+        return max_frame_num
 
     def _get_scan_slice(self):
         """Determine the indices which define the start (inclusive) and stop (exclusive) for the current scan frame
 
         The resulting indices can be used equally in dat_sliced fields or in kid_i_q timestreams.
         """
-        slice_i = self.scan_idx * self.scan_len
-        slice_f = (self.scan_idx + 1) * self.scan_len - 1
+        slice_i = self.frame_num * self.scan_len
+        slice_f = (self.frame_num + 1) * self.scan_len - 1
         return slice_i, slice_f
 
     def _get_kid_data(self, start_i, stop_i) -> so3g.G3SuperTimestream:
@@ -127,9 +145,8 @@ class ScanFrameGenerator:
                 ts.stop = t_f
                 out_frame[key] = ts
 
-
-        self.scan_idx += 1
-        if self.max_scans is not None and self.scan_idx >= self.max_scans:
+        self.frame_num += 1
+        if self.max_frame_num is not None and self.frame_num >= self.max_frame_num:
             self.done = True
 
         return out_frame
