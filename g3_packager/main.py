@@ -161,7 +161,7 @@ if __name__ == '__main__':
 
     # at the moment, the program runs out of memory with all 5 roaches
     data = BlastData(roach_ids=(1,))
-    generator = ScanFrameGenerator(data, 1, max_scans=10)
+    generator = ScanFrameGenerator(data, 1)
 
     pipe = core.G3Pipeline()
 
