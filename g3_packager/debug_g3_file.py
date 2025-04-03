@@ -6,35 +6,49 @@
 # Entry point for compilation of .g3 data
 # ============================================================================ #
 
-from data_loader import config
-from spt3g import core
-from typing import Union
-
 import argparse
+from fileinput import filename
+
+import so3g
+from spt3g import core
 import os
 
-from data_loader.config import version_dir
-
-def load(path) -> list[core.G3Frame]:
-    return list(core.G3File(path))
+class FrameCounter(core.G3Module):
+    def __init__(self):
+        super(FrameCounter, self).__init__()
+        self.previous_type = None
+        self.num_repeats = 0
+    def Process(self, frame):
+        type = frame.type
+        if type == self.previous_type:
+            self.num_repeats += 1
+            print(f"{type} (x{self.num_repeats + 1})", end='\r')
+        else:
+            print()
+            print(f"{type}", end='\r')
+            self.num_repeats = 0
+        self.previous_type = type
 
 if __name__ == '__main__':
 
-    breakpoint()
-
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--path',
-                        default=None,
-                        description=f"File path to folder containing .g3 file from g3_dir ({config.g3_dir})",)
+    parser.add_argument('-f', '--file', default=None)
     args = parser.parse_args()
 
-    if args.filepath is None:
-        filepath: os.path = os.path.join(r"C:\Users\Jonah\PycharmProjects\blasttng-to-g3\tmp", version_dir)
-    else:
-        filepath: os.path = os.path.join(r"C:\Users\Jonah\PycharmProjects\blasttng-to-g3\tmp", args.filepath)
+    filename = os.path.normpath(r"/mnt/c/Users/Jonah/PycharmProjects/blasttng-to-g3/tmp/testing/testfile.g3")
+    if args.file is not None:
+        # override default file
+        filename = os.path.normpath(args.file)
 
-    files = [file for file in os.listdir(filepath) if file.endswith('.g3')]
+    print(f"G3 file: {filename}")
 
-    print(f"G3 files in {filepath}", files)
+    def load() -> list[core.G3Frame]:
+        return list(core.G3File(filename))
+
+    def dump(profile=False) -> None:
+        pipe = core.G3Pipeline()
+        pipe.Add(core.G3Reader, filename=filename)
+        pipe.Add(core.Dump)
+        pipe.Run(profile=profile)
 
     breakpoint()
