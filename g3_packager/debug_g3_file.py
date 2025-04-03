@@ -26,6 +26,7 @@ class FrameCounter(core.G3Module):
         else:
             print()
             print(f"{type}", end='\r')
+            if type == core.G3FrameType.EndProcessing: print()
             self.num_repeats = 0
         self.previous_type = type
 
