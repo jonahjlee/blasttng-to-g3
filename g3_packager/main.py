@@ -10,8 +10,8 @@ from data_loader import config
 from data_loader.roach import RoachPass, RoachID, ScanPass
 
 # so3g must be imported before spt3g to avoid segmentation fault
-import math
 import so3g
+import spt3g
 from spt3g import core
 import numpy as np
 import os
@@ -144,6 +144,8 @@ class ScanFrameGenerator:
                 ts.start = t_i
                 ts.stop = t_f
                 out_frame[key] = ts
+
+        print(f"Generated Scan Frame {self.frame_num}/{self.max_frame_num}")
 
         self.frame_num += 1
         if self.max_frame_num is not None and self.frame_num >= self.max_frame_num:
