@@ -69,6 +69,7 @@ class FrameGenManager(core.G3Module):
     """
 
     def __init__(self, data: BlastData, generators=None):
+        super().__init__()
         self.generators: list[core.G3Module] = generators if generators is not None else []
         self.generator_idx = 0
         self.done = False
