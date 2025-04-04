@@ -6,12 +6,12 @@
 # Entry point for compilation of .g3 data
 # ============================================================================ #
 
+from frame_generators import BlastData, FrameGenManager, ScanFrameGenerator, CalFrameGenerator
 from data_loader.roach import ScanPass
 from data_loader import config
-from spt3g import core
 import os
 
-from frame_generators import BlastData, FrameGenManager, ScanFrameGenerator, CalFrameGenerator
+from spt3g import core
 
 if __name__ == '__main__':
 
