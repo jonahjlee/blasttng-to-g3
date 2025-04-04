@@ -160,14 +160,13 @@ if __name__ == '__main__':
     os.makedirs(out_dir, exist_ok=True)
 
     # at the moment, the program runs out of memory with all 5 roaches
-    data = BlastData(roach_ids=(1,))
+    data = BlastData(roach_ids=(1,), scan_pass=ScanPass.PASS_3)
     generator = ScanFrameGenerator(data, 1)
 
     pipe = core.G3Pipeline()
 
     pipe.Add(generator)
-    pipe.Add(core.G3Writer, filename=os.path.join(out_dir, 'testfile.g3'))
+    pipe.Add(core.G3Writer, filename=os.path.join(out_dir, 'roach1_pass3.g3'))
 
     pipe.Run()
 
-    breakpoint()
