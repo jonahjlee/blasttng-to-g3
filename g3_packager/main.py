@@ -182,9 +182,9 @@ class CalFrameGenerator:
             kids = data.roaches[roach_id].kids
             for kid in kids:
                 If, Qf, Ff = data.get_kid_target_sweeps(roach_id, kid)
-                iq_dict[f"roach{roach_id}_{kid}_I"] = core.G3Timestream(If)
-                iq_dict[f"roach{roach_id}_{kid}_Q"] = core.G3Timestream(Qf)
-                iq_dict[f"roach{roach_id}_{kid}_F"] = core.G3Timestream(Ff)
+                iq_dict[f"roach{roach_id}_{kid}_I"] = core.G3Timestream(If.astype(np.float64))
+                iq_dict[f"roach{roach_id}_{kid}_Q"] = core.G3Timestream(Qf.astype(np.float64))
+                iq_dict[f"roach{roach_id}_{kid}_F"] = core.G3Timestream(Ff.astype(np.float64))
         # initialize the timestream map
         # start/stop are not set because they are not used for DF calculation
         ts = core.G3TimestreamMap(iq_dict)
