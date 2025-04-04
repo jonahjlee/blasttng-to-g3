@@ -62,6 +62,16 @@ class BlastData:
     def get_kid_q(self, roach_id, kid) -> np.ndarray:
         return self.roaches[roach_id].get_kid_q(kid)
 
+    def get_kid_target_sweeps(self, roach_id, kid) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Load target sweeps If/Qf/Ff data for KID
+
+        see mmi_data_lib loadTargSweepsData/getTargSweepIQ for more"""
+        dat_targs, Ff = self.roaches[roach_id].dat_targs
+        kid_targ_i = dat_targs[:, 2 * int(kid)]
+        kid_targ_q = dat_targs[:, 2 * int(kid) + 1]
+        return kid_targ_i, kid_targ_q, Ff
+
+
 class ScanFrameGenerator:
     def __init__(self, data: BlastData, ref_roach_id: int,
                  scan_seconds: float=3, data_freq: float=476.5, frame_limit: int=None):
@@ -154,6 +164,35 @@ class ScanFrameGenerator:
         return out_frame
 
 
+class CalFrameGenerator:
+    """Generate Calibration Frame(s) for BLAST data.
+
+    This means dat_targs and Ff, since these are the inputs required
+    to compute DF given kid I/Q data.
+    """
+    def __init__(self, data: BlastData):
+        self.data: BlastData = data
+        self.done = False
+    def __call__(self, frame):
+        if self.done: return
+        out_frame = core.G3Frame(core.G3FrameType.Calibration)
+        iq_dict: dict[str, np.ndarray] = {}
+        for roach_id in data.roach_ids:
+            kids = data.roaches[roach_id].kids
+            for kid in kids:
+                If, Qf, Ff = data.get_kid_target_sweeps(roach_id, kid)
+                iq_dict[f"roach{roach_id}_{kid}_I"] = If
+                iq_dict[f"roach{roach_id}_{kid}_Q"] = Qf
+                iq_dict[f"roach{roach_id}_{kid}_F"] = Ff
+        # initialize the timestream map
+        # start/stop are not set because they are not used for DF calculation
+        ts = core.G3TimestreamMap(iq_dict)
+        out_frame['target_sweeps'] = ts
+        self.done = True
+        return [frame, out_frame]  # insert the calframe into the pipeline
+
+
+
 if __name__ == '__main__':
 
     out_dir = os.path.join(config.g3_dir, config.version_dir)
@@ -161,11 +200,12 @@ if __name__ == '__main__':
 
     # at the moment, the program runs out of memory with all 5 roaches
     data = BlastData(roach_ids=(1,), scan_pass=ScanPass.PASS_3)
-    generator = ScanFrameGenerator(data, 1)
+    scan_generator = ScanFrameGenerator(data, 1)
+    cal_generator = CalFrameGenerator(data)
 
     pipe = core.G3Pipeline()
-
-    pipe.Add(generator)
+    pipe.Add(cal_generator)
+    pipe.Add(scan_generator)
     pipe.Add(core.G3Writer, filename=os.path.join(out_dir, 'roach1_pass3.g3'))
 
     pipe.Run()
