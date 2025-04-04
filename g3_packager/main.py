@@ -177,7 +177,7 @@ class CalFrameGenerator:
     def __call__(self, frame):
         if self.done: return
         out_frame = core.G3Frame(core.G3FrameType.Calibration)
-        iq_dict: dict[str, np.ndarray] = {}
+        iq_dict: dict[str, core.G3Timestream] = {}
         for roach_id in data.roach_ids:
             kids = data.roaches[roach_id].kids
             for kid in kids:
