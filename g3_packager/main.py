@@ -66,7 +66,8 @@ class BlastData:
         """Load target sweeps If/Qf/Ff data for KID
 
         see mmi_data_lib loadTargSweepsData/getTargSweepIQ for more"""
-        dat_targs, Ff = self.roaches[roach_id].dat_targs
+        dat_targs = self.roaches[roach_id].dat_targs
+        Ff = self.roaches[roach_id].Ff
         kid_targ_i = dat_targs[:, 2 * int(kid)]
         kid_targ_q = dat_targs[:, 2 * int(kid) + 1]
         return kid_targ_i, kid_targ_q, Ff
