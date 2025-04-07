@@ -102,6 +102,7 @@ def add_radec(frame, az: str="az", el: str="el", lat: str="lat", lon: str="lon",
     dec_ts.stop = t_f
     frame[dec] = dec_ts
 
+
 def plot_ra_dec(frame):
     # skip any frame that doesn't contain the right key
     if "ra" not in frame or "dec" not in frame:
