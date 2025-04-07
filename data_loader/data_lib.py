@@ -13,6 +13,7 @@ import os
 import re
 import gc
 import numpy as np
+import pandas as pd
 
 
 # ============================================================================ #
@@ -241,3 +242,70 @@ def abFromLayout(file_layout):
     ab = {kid: (a[i],b[i]) for i,kid in enumerate(kids)}
 
     return ab
+
+
+# ============================================================================ #
+def load_kid_layout(file, rejects_file=None) -> dict[str, tuple[float, float]]:
+    if file.endswith('.csv'):
+        return load_kid_layout_csv(file, rejects_file)
+    if file.endswith('.npy'):
+        return load_kid_layout_npy(file, rejects_file)
+
+    raise ValueError('Layout file must end with .csv or .npy')
+
+
+# ============================================================================ #
+def load_kid_layout_npy(file, rejects_file=None) -> dict[str, tuple[float, float]]:
+    """Loads KID x/y coordinates on the image plane for a ROACH
+
+    Returns a dictionary which maps KID IDs to coordinate pairs.
+    """
+    try:
+        layouts_dict = np.load(file, allow_pickle=True).item()
+
+        # parse keys in the form '0000' or 'roach1_0000'
+        if isinstance(next(iter(layouts_dict.keys())), str):
+            layouts_dict = {key[-4:]: val for key, val in layouts_dict.items()}
+        # parse keys in the form of ints
+        if isinstance(next(iter(layouts_dict.keys())), int):
+            layouts_dict = {f'{key:04}': val for key, val in layouts_dict.items()}
+
+        if rejects_file is not None:
+            try:
+                rejects = np.loadtxt(rejects_file, delimiter=' ', dtype=str)
+                if isinstance(rejects[0], str): rejects = [key[-4:] for key in rejects]
+                if isinstance(rejects[0], int): rejects = [f'{key:04}' for key in rejects]
+                layouts_dict = {key: val for key, val in layouts_dict.items() if key in rejects}
+            except FileNotFoundError as err:
+                print(f"File {rejects_file} not found")
+                raise err
+
+        return layouts_dict
+
+    except FileNotFoundError as err:
+        print(f"File {file} not found")
+        raise err
+
+
+# ============================================================================ #
+def load_kid_layout_csv(file, rejects_file=None) -> dict[str, tuple[float, float]]:
+    """Loads KID x/y coordinates on the image plane for a ROACH
+
+    Returns a dictionary which maps KID IDs to coordinate pairs.
+    """
+    try:
+        df = pd.read_csv(file, index_col=0)
+
+        if rejects_file is not None:
+            try:
+                rejects = np.loadtxt(rejects_file, delimiter=' ', dtype=str),
+                df = df[~df.index.isin(rejects)]
+            except FileNotFoundError as err:
+                print(f"File {rejects_file} not found")
+                raise err
+
+        return {str(kid): (df['x'][kid], df['y'][kid]) for kid in df.index}
+
+    except FileNotFoundError as err:
+        print(f"File {file} not found")
+        raise err
