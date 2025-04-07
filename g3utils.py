@@ -1,3 +1,14 @@
+# ============================================================================ #
+# g3utils.py
+#
+# Jonah Lee
+#
+# Collection of miscellaneous tools for processing BLAST-TNG G3 files.
+# Mostly contains G3 Modules for use in pipelines.
+# Includes modules for debugging, signal processing, map-making etc.
+# This file will probably be moved into a more organized package.
+# ============================================================================ #
+
 import so3g
 from spt3g import core
 import numpy as np
