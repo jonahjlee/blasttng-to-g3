@@ -1,8 +1,13 @@
+import os
+
 from data_loader.roach import RoachPass, RoachID, ScanPass
+from data_loader import data_lib as dlib
+from data_loader import config
 # so3g must be imported before spt3g to avoid segmentation fault
 import so3g
 from spt3g import core
 import numpy as np
+from astropy.wcs import WCS
 
 
 class BlastData:
@@ -141,7 +146,7 @@ class ScanFrameGenerator(core.G3Module):
         ts = so3g.G3SuperTimestream(kid_i_q_names, times, kid_i_q_data, quanta)
         return ts
 
-    def Process(self, frame):
+    def Process(self, _):
         assert not self.done, "Generator should not be called when it is done!"
 
         out_frame = core.G3Frame(core.G3FrameType.Scan)
@@ -191,9 +196,7 @@ class CalFrameGenerator(core.G3Module):
         self.data: BlastData = data
         self.done = False
 
-    def Process(self, frame):
-        assert not self.done, "Generator should not be called when it is done!"
-        out_frame = core.G3Frame(core.G3FrameType.Calibration)
+    def get_target_sweeps(self):
         iq_dict: dict[str, core.G3Timestream] = {}
         for roach_id in self.data.roach_ids:
             kids = self.data.roaches[roach_id].kids
@@ -205,6 +208,53 @@ class CalFrameGenerator(core.G3Module):
         # initialize the timestream map
         # start/stop are not set because they are not used for DF calculation
         ts = core.G3TimestreamMap(iq_dict)
-        out_frame['target_sweeps'] = ts
+        return ts
+
+    @staticmethod
+    def um_to_az_el_offsets(x_um, y_um, platescale):
+        """Converts micron offsets on image plane to az/el on-sky offsets
+
+        Returns values as angular G3 Units
+        """
+        w = WCS(naxis=2)
+        w.wcs.crpix = [0, 0]  # center of the focal plane is tangent point
+        w.wcs.crval = [0., 0.]  # source is at center in offsets map
+        w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+        w.wcs.cdelt = [platescale, platescale]
+
+        x_deg, y_deg = w.wcs_pix2world(x_um, y_um, 0)
+
+        return x_deg * core.G3Units.deg, y_deg * core.G3Units.deg
+
+    def get_kid_shifts(self) -> tuple[core.G3MapDouble, core.G3MapDouble]:
+        """Return source-determined KID x_shifts and y_shifts."""
+        # initialize some lists with a common KID index
+        kid_ids: list[str] = []
+        kid_x_offsets_um: list[float] = []  # list[x image plane offset in um]
+        kid_y_offsets_um: list[float] = []  # list[y image plane offset in um]
+        for roach_id in self.data.roach_ids:
+            layout_file = os.path.join("detector_layouts", f"roach{roach_id}_all_shifts.npy")
+            kid_layout: dict[str, tuple[float, float]] = dlib.load_kid_layout(layout_file)
+            for kid, xy in kid_layout.items():
+                kid_ids += f"roach{roach_id}_{kid}"
+                kid_x_offsets_um += xy[0]
+                kid_y_offsets_um += xy[1]
+        kid_x_angluar_offsets, kid_y_angluar_offsets = self.um_to_az_el_offsets(
+            kid_x_offsets_um, kid_y_offsets_um, config.platescale
+        )
+        x_keyvals = list(zip(kid_ids, kid_x_angluar_offsets))
+        y_keyvals = list(zip(kid_ids, kid_y_angluar_offsets))
+        return core.G3MapDouble(x_keyvals), core.G3MapDouble(y_keyvals)
+
+    def Process(self, _):
+        assert not self.done, "Generator should not be called when it is done!"
+
+        out_frame = core.G3Frame(core.G3FrameType.Calibration)
+
+        out_frame["target_sweeps"] = self.get_target_sweeps()
+        x_shifts, y_shifts = self.get_kid_shifts()
+        out_frame["x_shifts"] = x_shifts
+        out_frame["y_shifts"] = x_shifts
+
         self.done = True
         return out_frame  # insert the calframe into the pipeline
