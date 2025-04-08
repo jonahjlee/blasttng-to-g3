@@ -224,7 +224,11 @@ class CalFrameGenerator(core.G3Module):
 
         x_deg, y_deg = w.wcs_pix2world(x_um, y_um, 0)
 
-        return x_deg * core.G3Units.deg, y_deg * core.G3Units.deg
+        # Normalize the angles to the range [-180, 180)
+        x_deg_normalized = np.mod(x_deg + 180, 360) - 180
+        y_deg_normalized = np.mod(y_deg + 180, 360) - 180
+
+        return x_deg_normalized * core.G3Units.deg, y_deg_normalized * core.G3Units.deg
 
     def get_kid_shifts(self) -> tuple[core.G3MapDouble, core.G3MapDouble]:
         """Return source-determined KID x_shifts and y_shifts."""
@@ -254,7 +258,7 @@ class CalFrameGenerator(core.G3Module):
         out_frame["target_sweeps"] = self.get_target_sweeps()
         x_shifts, y_shifts = self.get_kid_shifts()
         out_frame["x_shifts"] = x_shifts
-        out_frame["y_shifts"] = x_shifts
+        out_frame["y_shifts"] = y_shifts
 
         self.done = True
         return out_frame  # insert the calframe into the pipeline
