@@ -85,10 +85,10 @@ def add_radec(frame, az: str="az", el: str="el", lat: str="lat", lon: str="lon",
 
     blasttng_loc = EarthLocation(lat=lat_deg, lon=lon_deg, height=alt_m)
     sky_coords = SkyCoord(alt=el_deg*astropy.units.deg,
-                                              az=az_deg*astropy.units.deg,
-                                              obstime=times,
-                                              frame='altaz',
-                                              location=blasttng_loc)
+                          az=az_deg*astropy.units.deg,
+                          obstime=times,
+                          frame='altaz',
+                          location=blasttng_loc)
     t_i = frame[data].times[0]
     t_f = frame[data].times[-1]
 
