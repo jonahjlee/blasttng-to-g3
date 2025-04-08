@@ -283,3 +283,71 @@ def remove_common_mode(frame):
     # store the calibrated timestreams to the output key in the frame
     frame["df_ctremoved"] = df_ctremoved
     frame["common_mode"] = common_mode
+
+
+class SingleMapBinner:
+    def __init__(self, kid, timestreams="df", ra0=None, dec0=None, xlen=None, ylen=None, res=None):
+        # center of the sky map
+        assert ra0 is not None, "must set ra0!"
+        assert dec0 is not None, "must set dec0!"
+        self.ra0 = ra0
+        self.dec0 = dec0
+
+        self.xlen = xlen if xlen is not None else 1 * core.G3Units.deg
+        self.ylen = ylen if ylen is not None else 1 * core.G3Units.deg
+
+        self.res = res if res is not None else 1 * core.G3Units.arcmin
+
+        # number of bins along each axis
+        self.nx = int(self.xlen / self.res)
+        self.ny = int(self.ylen / self.res)
+
+        # bin edges
+        self.ra_edges = np.linspace(-self.xlen / 2, self.xlen / 2, self.nx + 1) + self.ra0
+        self.dec_edges = np.linspace(-self.ylen / 2, self.ylen / 2, self.ny + 1) + self.dec0
+
+        self.kid = kid
+        self.timestreams = timestreams
+
+        # array for storing the binned timestream data
+        self.data = np.zeros((self.ny, self.nx), dtype=float)
+
+        # array for storing the number of times each pixel is "hit" in the timestreams
+        self.hits = np.zeros((self.ny, self.nx), dtype=float)
+
+    def __call__(self, frame):
+        if self.timestreams not in frame:
+            return
+
+        super_ts = frame[self.timestreams]
+
+        kid_idx = int(np.where(np.array(super_ts.names) == self.kid)[0][0])
+        kid_ts = super_ts.data[kid_idx]
+
+        # naively use boresight pointing for now...
+        y = np.asarray(frame["dec"])
+        x = np.asarray(frame["ra"])
+
+        # update data and hits, in-place
+        self.data += np.histogram2d(y, x, bins=[self.dec_edges, self.ra_edges], weights=kid_ts)[0]
+        self.hits += np.histogram2d(y, x, bins=[self.dec_edges, self.ra_edges])[0]
+
+    def plot(self, ax=None):
+        with np.errstate(invalid='ignore'):
+            m = self.data / self.hits
+            if ax is not None:
+                ax.imshow(m, origin='lower')
+                ax.set_xticks(range(self.nx+1)[::10], [f"{ra:.2f}" for ra in self.ra_edges[::10] / core.G3Units.deg], rotation=45)
+                ax.set_yticks(range(self.ny+1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / core.G3Units.deg])
+                ax.set_xlabel("RA (deg)")
+                ax.set_ylabel("DEC (deg)")
+                ax.set_title(f"{self.kid}")
+            else:
+                plt.imshow(m, origin='lower')
+                plt.xticks(range(self.nx+1)[::10], [f"{ra:.2f}" for ra in self.ra_edges[::10] / core.G3Units.deg], rotation=45)
+                plt.yticks(range(self.ny+1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / core.G3Units.deg])
+                plt.colorbar(label="DF")
+                plt.xlabel("RA (deg)")
+                plt.ylabel("DEC (deg)")
+                plt.title(f"{self.kid}")
+                plt.show()
