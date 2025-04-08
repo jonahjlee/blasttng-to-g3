@@ -236,9 +236,9 @@ class CalFrameGenerator(core.G3Module):
             layout_file = os.path.join(os.path.dirname(__file__), "detector_layouts", f"roach{roach_id}_all_shifts.npy")
             kid_layout: dict[str, tuple[float, float]] = dlib.load_kid_layout(layout_file)
             for kid, xy in kid_layout.items():
-                kid_ids += f"roach{roach_id}_{kid}"
-                kid_x_offsets_um += xy[0]
-                kid_y_offsets_um += xy[1]
+                kid_ids.append(f"roach{roach_id}_{kid}")
+                kid_x_offsets_um.append(xy[0])
+                kid_y_offsets_um.append(xy[1])
         kid_x_angluar_offsets, kid_y_angluar_offsets = self.um_to_az_el_offsets(
             kid_x_offsets_um, kid_y_offsets_um, config.platescale
         )
