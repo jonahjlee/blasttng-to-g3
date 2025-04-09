@@ -237,7 +237,7 @@ class CalFrameGenerator(core.G3Module):
         kid_x_offsets_um: list[float] = []  # list[x image plane offset in um]
         kid_y_offsets_um: list[float] = []  # list[y image plane offset in um]
         for roach_id in self.data.roach_ids:
-            layout_file = os.path.join(os.path.dirname(__file__), "detector_layouts", f"roach{roach_id}_all_shifts.npy")
+            layout_file = os.path.join(os.path.dirname(__file__), "detector_layouts", f"roach{roach_id}_shifts_um.npy")
             kid_layout: dict[str, tuple[float, float]] = dlib.load_kid_layout(layout_file)
             for kid, xy in kid_layout.items():
                 kid_ids.append(f"roach{roach_id}_{kid}")
