@@ -22,7 +22,7 @@ if __name__ == '__main__':
     data = BlastData(roach_ids=(1,), scan_pass=ScanPass.PASS_3)
 
     scan_generator = ScanFrameGenerator(data, 1)
-    cal_generator = CalFrameGenerator(data)
+    cal_generator = CalFrameGenerator(data, 1)
 
     # create a FrameGenManager which manages frame insertion between generator modules
     frame_gen_manager = FrameGenManager(data, [cal_generator, scan_generator])

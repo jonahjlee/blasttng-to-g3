@@ -98,7 +98,7 @@ class ScanFrameGenerator(core.G3Module):
                  scan_seconds: float=3, data_freq: float=476.5, frame_limit: int=None):
         super().__init__()
         self.data: BlastData = data
-        self.ref_roach_id: id = ref_roach_id
+        self.ref_roach_id: int = ref_roach_id
         self.frame_num: int = 0
         self.scan_seconds: float = scan_seconds
         self.data_freq: float = data_freq
@@ -191,10 +191,11 @@ class CalFrameGenerator(core.G3Module):
     This means dat_targs and Ff, since these are the inputs required
     to compute DF given kid I/Q data.
     """
-    def __init__(self, data: BlastData):
+    def __init__(self, data: BlastData, ref_roach_id: int):
         super().__init__()
         self.data: BlastData = data
         self.done = False
+        self.ref_roach_id: int = ref_roach_id
 
     def get_target_sweeps(self):
         iq_dict: dict[str, core.G3Timestream] = {}
@@ -250,6 +251,24 @@ class CalFrameGenerator(core.G3Module):
         y_keyvals = list(zip(kid_ids, kid_y_angluar_offsets))
         return core.G3MapDouble(x_keyvals), core.G3MapDouble(y_keyvals)
 
+    def _get_cal_lamp_kid_data(self) -> so3g.G3SuperTimestream:
+        start_i = config.cal_i_offset
+        stop_i = config.cal_f_offset
+        times = core.G3VectorTime(self.data.get_time(self.ref_roach_id)[start_i:stop_i])
+        kid_i_q_data = None
+        kid_i_q_names = None
+        for id, roach in self.data.roaches.items():
+            roach_i_names = [f'roach{id}_{kid}_I' for kid in roach.kids]
+            roach_i = [roach.get_kid_i(kid)[start_i:stop_i] for kid in roach.kids]
+            roach_q_names = [f'roach{id}_{kid}_Q' for kid in roach.kids]
+            roach_q = [roach.get_kid_q(kid)[start_i:stop_i] for kid in roach.kids]
+            kid_i_q_data = np.array(roach_i + roach_q)
+            kid_i_q_names = roach_i_names + roach_q_names
+        # see https://so3g.readthedocs.io/en/latest/cpp_objects.html#how-to-work-with-float-arrays
+        quanta = 0.01 * np.ones(len(kid_i_q_names))
+        ts = so3g.G3SuperTimestream(kid_i_q_names, times, kid_i_q_data, quanta)
+        return ts
+
     def Process(self, _):
         assert not self.done, "Generator should not be called when it is done!"
 
@@ -259,6 +278,7 @@ class CalFrameGenerator(core.G3Module):
         x_shifts, y_shifts = self.get_kid_shifts()
         out_frame["x_shifts"] = x_shifts
         out_frame["y_shifts"] = y_shifts
+        out_frame["cal_lamp_data"] = self._get_cal_lamp_kid_data()
 
         self.done = True
         return out_frame  # insert the calframe into the pipeline
