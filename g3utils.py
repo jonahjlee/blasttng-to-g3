@@ -103,13 +103,13 @@ def add_radec(frame, az: str="az", el: str="el", lat: str="lat", lon: str="lon",
     frame[dec] = dec_ts
 
 
-def plot_ra_dec(frame):
+def plot_ra_dec(frame, ra_key="ra", dec_key="dec"):
     # skip any frame that doesn't contain the right key
-    if "ra" not in frame or "dec" not in frame:
+    if ra_key not in frame or dec_key not in frame:
         return
 
     # plot coordinates in real units
-    plt.plot(frame["ra"] / core.G3Units.deg, frame["dec"] / core.G3Units.deg)
+    plt.plot(frame[ra_key] / core.G3Units.deg, frame[dec_key] / core.G3Units.deg)
 
 
 # not a module, but used in DF modules below
