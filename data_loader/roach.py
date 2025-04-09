@@ -10,8 +10,8 @@
 # ============================================================================ #
 
 from .config import (ScanPass, slice_i_dict, pass_indices, dir_roach_dict,
-                    dir_targ_dict, dir_master, RoachID,
-                    kid_ref_dict, kid_max_dict, file_rejects_dict)
+                     dir_targ_dict, dir_master, RoachID,
+                     kid_ref_dict, kid_max_dict, file_rejects_dict, cal_i_offset, cal_f_offset)
 from data_loader import data_lib as dlib
 
 
@@ -60,6 +60,22 @@ class RoachPass:
                 f"\n    dir_roach: {self.dir_roach}"
                 f"\n    dir_targ: {self.dir_targ}"
                 f"\n    file_rejects: {self.file_rejects}")
+
+    def get_kid_cal_lamp_i(self, kid):
+        """Obtain the sliced I (in-phase) data for a given KID during the calibration lamp period"""
+        i_tod = dlib.loadKIDI(self.id, kid, self.dir_roach)
+        cal_start = slice_i_dict[self.id] + cal_i_offset
+        cal_stop = slice_i_dict[self.id] + cal_f_offset
+        i_sliced = i_tod[self.dat_align_indices[cal_start:cal_stop]]
+        return i_sliced
+
+    def get_kid_cal_lamp_q(self, kid):
+        """Obtain the sliced Q (quadrature) data for a given KID during the calibration lamp period"""
+        q_tod = dlib.loadKIDI(self.id, kid, self.dir_roach)
+        cal_start = slice_i_dict[self.id] + cal_i_offset
+        cal_stop = slice_i_dict[self.id] + cal_f_offset
+        q_sliced = q_tod[self.dat_align_indices[cal_start:cal_stop]]
+        return q_sliced
 
     def get_kid_i(self, kid):
         """Obtain the sliced I (in-phase) data for a given KID in this RoachPass"""

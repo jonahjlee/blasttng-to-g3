@@ -252,21 +252,20 @@ class CalFrameGenerator(core.G3Module):
         return core.G3MapDouble(x_keyvals), core.G3MapDouble(y_keyvals)
 
     def _get_cal_lamp_kid_data(self) -> so3g.G3SuperTimestream:
-        start_i = config.cal_i_offset
-        stop_i = config.cal_f_offset
-        times = core.G3VectorTime(self.data.get_time(self.ref_roach_id)[start_i:stop_i])
         kid_i_q_data = None
         kid_i_q_names = None
         for id, roach in self.data.roaches.items():
             roach_i_names = [f'roach{id}_{kid}_I' for kid in roach.kids]
-            roach_i = [roach.get_kid_i(kid)[start_i:stop_i] for kid in roach.kids]
+            roach_i = [roach.get_kid_cal_lamp_i(kid) for kid in roach.kids]
             roach_q_names = [f'roach{id}_{kid}_Q' for kid in roach.kids]
-            roach_q = [roach.get_kid_q(kid)[start_i:stop_i] for kid in roach.kids]
+            roach_q = [roach.get_kid_cal_lamp_q(kid) for kid in roach.kids]
             kid_i_q_data = np.array(roach_i + roach_q)
             kid_i_q_names = roach_i_names + roach_q_names
         # see https://so3g.readthedocs.io/en/latest/cpp_objects.html#how-to-work-with-float-arrays
-        quanta = 0.01 * np.ones(len(kid_i_q_names))
-        ts = so3g.G3SuperTimestream(kid_i_q_names, times, kid_i_q_data, quanta)
+        ts = so3g.G3SuperTimestream()
+        ts.names = kid_i_q_names
+        ts.data = kid_i_q_data
+        ts.quanta = 0.01 * np.ones(len(kid_i_q_names))
         return ts
 
     def Process(self, _):
