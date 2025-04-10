@@ -262,7 +262,7 @@ class CalFrameGenerator(core.G3Module):
             kid_i_q_data = np.array(roach_i + roach_q)
             kid_i_q_names = roach_i_names + roach_q_names
         # see https://so3g.readthedocs.io/en/latest/cpp_objects.html#how-to-work-with-float-arrays
-        times = np.zeros(config.cal_f_offset - config.cal_i_offset)  # real times not needed, use placeholder for now
+        times = core.G3VectorTime(np.zeros(config.cal_f_offset - config.cal_i_offset))  # real times not needed, use placeholder for now
         quanta = 0.01 * np.ones(len(kid_i_q_names))
         ts = so3g.G3SuperTimestream(kid_i_q_names, times, kid_i_q_data, quanta)
         return ts
