@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from astropy.coordinates import EarthLocation, SkyCoord
 from astropy.time import Time
 import astropy.units as au
-import spt3g.core.G3Units as gu
+from spt3g.core import G3Units as gu
 from scipy.ndimage import gaussian_filter
 
 class FrameCounter(core.G3Module):
