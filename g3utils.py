@@ -172,7 +172,7 @@ def add_cal_lamp_df(frame, roach_id=1, iq_key="data"):
     times = super_ts.times
     quanta = np.std(df_data) / 10_000
 
-    df_super_ts = core.G3SuperTimestream(names, times, df_data, quanta)
+    df_super_ts = so3g.G3SuperTimestream(names, times, df_data, quanta)
 
     frame["cal_lamp_df"] = df_super_ts
 
@@ -295,7 +295,7 @@ def remove_common_mode(frame):
         return
 
     # get the input timestream data
-    ts_in: core.G3SuperTimestream = frame["df"]
+    ts_in: so3g.G3SuperTimestream = frame["df"]
 
     # use broadcast to remove common-mode from all timestreams
     tsarr: np.ndarray[np.f64] = ts_in.data
