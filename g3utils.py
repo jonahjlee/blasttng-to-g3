@@ -170,7 +170,7 @@ def add_cal_lamp_df(frame, roach_id=1, iq_key="data"):
         df_data[i] = df_IQangle(kid_i, kid_q, If, Qf, Ff)
 
     times = super_ts.times
-    quanta = np.std(df_data) / 10_000
+    quanta = np.ones(len(kids)) * np.std(df_data) / 10_000
 
     df_super_ts = so3g.G3SuperTimestream(names, times, df_data, quanta)
 
