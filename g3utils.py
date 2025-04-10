@@ -145,11 +145,11 @@ def df_IQangle(I, Q, If, Qf, Ff, i_f0=None):
 
     return df / Ff[i_f0]
 
-def add_cal_lamp_df(frame, roach_id=1):
+def add_cal_lamp_df(frame, roach_id=1, iq_key="data"):
     if frame.type != core.G3FrameType.Calibration:
         return
 
-    super_ts = frame["data"]
+    super_ts = frame[iq_key]
 
     kids = set([id_str[-6:-2] for id_str in super_ts.names])
     df_data = np.zeros((len(kids), super_ts.data.shape[1]))
