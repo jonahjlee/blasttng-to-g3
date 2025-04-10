@@ -145,6 +145,36 @@ def df_IQangle(I, Q, If, Qf, Ff, i_f0=None):
 
     return df / Ff[i_f0]
 
+def add_cal_lamp_df(frame, roach_id=1):
+    if frame.type != core.G3FrameType.Calibration:
+        return
+
+    super_ts = frame["data"]
+
+    kids = set([id_str[-6:-2] for id_str in super_ts.names])
+    df_data = np.zeros((len(kids), super_ts.data.shape[1]))
+    names = []
+    for i, kid in enumerate(kids):
+        i_idx = int(np.where(np.asarray(super_ts.names) == f"roach{roach_id}_{kid}_I")[0][0])
+        q_idx = int(np.where(np.asarray(super_ts.names) == f"roach{roach_id}_{kid}_Q")[0][0])
+        kid_i = super_ts.data[i_idx]
+        kid_q = super_ts.data[q_idx]
+
+        # load target sweeps
+        If = np.array(frame["target_sweeps"][f"roach{roach_id}_{kid}_I"])
+        Qf = np.array(frame["target_sweeps"][f"roach{roach_id}_{kid}_Q"])
+        Ff = np.array(frame["target_sweeps"][f"roach{roach_id}_{kid}_F"])
+
+        # build df tod
+        names.append(f"roach{roach_id}_{kid}")
+        df_data[i] = df_IQangle(kid_i, kid_q, If, Qf, Ff)
+
+    times = super_ts.times
+    quanta = np.std(df_data) / 10_000
+
+    df_super_ts = core.G3SuperTimestream(names, times, df_data, quanta)
+
+    frame["cal_lamp_df"] = df_super_ts
 
 class AddSingleKidDF:
     def __init__(self, roach_id=1, kid="0000"):
