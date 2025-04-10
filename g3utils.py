@@ -185,6 +185,7 @@ def df_IQangle(I, Q, If, Qf, Ff, i_f0=None):
 
     return df / Ff[i_f0]
 
+
 def add_cal_lamp_df(frame, roach_id=1, iq_key="data"):
     if frame.type != core.G3FrameType.Calibration:
         return
@@ -215,6 +216,7 @@ def add_cal_lamp_df(frame, roach_id=1, iq_key="data"):
     df_super_ts = so3g.G3SuperTimestream(names, times, df_data, quanta)
 
     frame["cal_lamp_df"] = df_super_ts
+
 
 class AddSingleKidDF:
     def __init__(self, roach_id=1, kid="0000"):
@@ -253,7 +255,7 @@ class AddSingleKidDF:
         frame[f"roach{self.roach_id}_{self.kid}_DF"] = df_ts
 
 
-class AddAllDF:
+class AddScanDF:
     def __init__(self, roach_id=1):
         self.roach_id = roach_id
         self.calframe = None
