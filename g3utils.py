@@ -299,6 +299,83 @@ class AddScanDF:
         frame["df"] = df_super_timestream
 
 
+class DetectorStats:
+    """Determine the median and standard deviation for detectors over all scans
+
+    Stores a `medians` and `stds` attribute, which have shape (n_scans, n_dets)
+    """
+
+    def __init__(self, data_key: str = "df"):
+        self.data_key = data_key
+        self.stds = []
+        self.medians = []
+
+    def __call__(self, frame):
+        if frame.type != core.G3FrameType.Scan:
+            return
+        data = frame[self.data_key].data
+        self.stds.append(np.std(data, axis=1))
+        self.medians.append(np.median(data, axis=1))
+
+
+def naive_normalize_df(frame, detector_medians=None, detector_stds=None):
+    """Normalize tods by setting median to zero and stdev to 1"""
+    if frame.type != core.G3FrameType.Scan:
+        return
+
+    # data has shape (n_dets, n_samps)
+    data = frame["df"].data
+    n_dets = data.shape[0]
+
+    data_zeroed = data - detector_medians[:, None]
+    norm_df = data_zeroed / detector_stds[:, None]
+
+    out_super_ts = so3g.G3SuperTimestream(
+        frame["df"].names,
+        frame["df"].times,
+        norm_df,
+        np.ones(n_dets) * 0.00001,  # quanta - float resolution when compressed, current val is arbitrary
+    )
+
+    frame["norm_df"] = out_super_ts
+
+
+class NormalizeDF():
+    def __init__(self, detector_medians=None, in_key="df", out_key="norm_df", cal_df="cal_lamp_df"):
+        self.in_key = in_key
+        self.out_key = out_key
+        self.cal_df = cal_df
+        self.calframe = None
+        self.detector_medians = detector_medians
+
+    def __call__(self, frame):
+        """Normalize tods by setting median to zero and cal lamp max to 1"""
+        if frame.type == core.G3FrameType.Calibration:
+            self.calframe = frame
+        if frame.type != core.G3FrameType.Scan:
+            return
+        assert self.calframe is not None, "cannot normalize DF in scan without prior calibration data!"
+
+        # data has shape (n_dets, n_samps)
+        data = frame[self.in_key].data
+        n_dets = data.shape[0]
+
+        data_zeroed = data - self.detector_medians[:, None]
+        norm_df = data_zeroed / np.max(self.calframe[self.cal_df].data, axis=1)[:, None]
+
+        out_super_ts = so3g.G3SuperTimestream(
+            frame[self.in_key].names,
+            frame[self.in_key].times,
+            norm_df,
+            np.ones(n_dets) * 0.00001,  # quanta - float resolution when compressed, current val is arbitrary
+        )
+
+        frame[self.out_key] = out_super_ts
+
+
+
+
+
 class GenericPlotter:
     def __init__(self, array_getter=None, label: str=None, subplots_args: dict=None, plot_args: dict=None):
         """array_getter is a callable which takes in a frame and returns an array-like object to plot"""
