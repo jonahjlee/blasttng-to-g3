@@ -14,7 +14,9 @@ from spt3g import core
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.coordinates import EarthLocation, SkyCoord
-import astropy.units
+from astropy.time import Time
+import astropy.units as au
+import spt3g.core.G3Units as gu
 
 class FrameCounter(core.G3Module):
     def __init__(self):
@@ -64,8 +66,12 @@ class LastFrameGrabber:
             print(f"The frame is now stored in {self}'s last_frame attribute.")
 
 
-def add_radec(frame, az: str="az", el: str="el", lat: str="lat", lon: str="lon", alt: str="alt", data: str="data",
-             ra: str="ra", dec: str="dec"):
+def add_radec_astropy(frame,
+                      az: str="az", el: str="el",
+                      lat: str="lat", lon: str="lon",
+                      alt: str="alt",
+                      data: str="data",
+                      ra: str="ra", dec: str="dec"):
     """Use astropy coordinate transformations to convert az/el --> ra/dec.
 
     Keyword arguments indicate keys in the scan frame for inputs/outputs
@@ -74,33 +80,67 @@ def add_radec(frame, az: str="az", el: str="el", lat: str="lat", lon: str="lon",
     if frame.type != core.G3FrameType.Scan:
         return
 
-    az_deg = np.array(frame[az]) / core.G3Units.deg
-    el_deg = np.array(frame[el]) / core.G3Units.deg
-    lat_deg = np.array(frame[lat]) / core.G3Units.deg
-    lon_deg = np.array(frame[lon]) / core.G3Units.deg
-    alt_m = np.array(frame[alt]) / core.G3Units.m
+    az_deg = np.array(frame[az]) / gu.deg
+    el_deg = np.array(frame[el]) / gu.deg
+    lat_deg = np.array(frame[lat]) / gu.deg
+    lon_deg = np.array(frame[lon]) / gu.deg
+    alt_m = np.array(frame[alt]) / gu.m
 
-    unix_times = np.array(frame[data].times) / core.G3Units.s
-    times = astropy.time.Time(unix_times, format="unix")
+    unix_times = np.array(frame[data].times) / gu.s
+    times = Time(unix_times, format="unix")
 
     blasttng_loc = EarthLocation(lat=lat_deg, lon=lon_deg, height=alt_m)
-    sky_coords = SkyCoord(alt=el_deg*astropy.units.deg,
-                          az=az_deg*astropy.units.deg,
+    sky_coords = SkyCoord(alt=el_deg * au.deg,
+                          az=az_deg * au.deg,
                           obstime=times,
                           frame='altaz',
                           location=blasttng_loc)
     t_i = frame[data].times[0]
     t_f = frame[data].times[-1]
 
-    ra_ts = core.G3Timestream(sky_coords.icrs.ra.deg * core.G3Units.deg)
+    ra_ts = core.G3Timestream(sky_coords.icrs.ra.deg * gu.deg)
     ra_ts.start = t_i
     ra_ts.stop = t_f
     frame[ra] = ra_ts
 
-    dec_ts = core.G3Timestream(sky_coords.icrs.dec.deg * core.G3Units.deg)
+    dec_ts = core.G3Timestream(sky_coords.icrs.dec.deg * gu.deg)
     dec_ts.start = t_i
     dec_ts.stop = t_f
     frame[dec] = dec_ts
+
+def add_radec_so3g(frame,
+                   az: str="az", el: str="el",
+                   lat: str="lat", lon: str="lon",
+                   alt: str="alt",
+                   data: str="data",
+                   ra: str="ra", dec: str="dec"):
+    if frame.type != core.G3FrameType.Scan:
+        return
+
+    # Approx location for this time frame
+    middle_idx = len(frame[lon]) // 2
+    site = so3g.proj.EarthlySite(
+        frame[lon][middle_idx] / gu.deg,
+        frame[lat][middle_idx] / gu.deg,
+        frame[alt][middle_idx] / gu.m
+    )
+
+    # coords() returns an array with shape (n_time, 4); each 4-tuple contains values (lon, lat, cos(gamma), sin(gamma))
+    # Construct a CelestialSightLine to az_el to on-sky coords
+    times = np.array(frame[data].times) / gu.s
+    csl = so3g.proj.CelestialSightLine.naive_az_el(
+        times,
+        frame[az] / gu.rad,
+        frame[el] / gu.rad,
+        site=site
+    )
+    coords = csl.coords(so3g.proj.FocalPlane.boresight())
+
+    x = np.mod(coords[0][:, 0], 2 * np.pi) * gu.rad
+    y = coords[0][:, 1] * gu.rad
+
+    frame[ra] = core.G3VectorDouble(x)
+    frame[dec] = core.G3VectorDouble(y)
 
 
 def plot_ra_dec(frame, ra_key="ra", dec_key="dec"):
@@ -109,7 +149,7 @@ def plot_ra_dec(frame, ra_key="ra", dec_key="dec"):
         return
 
     # plot coordinates in real units
-    plt.plot(frame[ra_key] / core.G3Units.deg, frame[dec_key] / core.G3Units.deg)
+    plt.plot(frame[ra_key] / gu.deg, frame[dec_key] / gu.deg)
 
 
 # not a module, but used in DF modules below
@@ -323,10 +363,10 @@ class SingleMapBinner:
         self.ra0 = ra0
         self.dec0 = dec0
 
-        self.xlen = xlen if xlen is not None else 1 * core.G3Units.deg
-        self.ylen = ylen if ylen is not None else 1 * core.G3Units.deg
+        self.xlen = xlen if xlen is not None else 1 * gu.deg
+        self.ylen = ylen if ylen is not None else 1 * gu.deg
 
-        self.res = res if res is not None else 1 * core.G3Units.arcmin
+        self.res = res if res is not None else 1 * gu.arcmin
 
         # number of bins along each axis
         self.nx = int(self.xlen / self.res)
@@ -367,15 +407,15 @@ class SingleMapBinner:
             m = self.data / self.hits
             if ax is not None:
                 ax.imshow(m, origin='lower')
-                ax.set_xticks(range(self.nx+1)[::10], [f"{ra:.2f}" for ra in self.ra_edges[::10] / core.G3Units.deg], rotation=45)
-                ax.set_yticks(range(self.ny+1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / core.G3Units.deg])
+                ax.set_xticks(range(self.nx+1)[::10], [f"{ra:.2f}" for ra in self.ra_edges[::10] / gu.deg], rotation=45)
+                ax.set_yticks(range(self.ny+1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / gu.deg])
                 ax.set_xlabel("RA (deg)")
                 ax.set_ylabel("DEC (deg)")
                 ax.set_title(f"{self.kid}")
             else:
                 plt.imshow(m, origin='lower')
-                plt.xticks(range(self.nx+1)[::10], [f"{ra:.2f}" for ra in self.ra_edges[::10] / core.G3Units.deg], rotation=45)
-                plt.yticks(range(self.ny+1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / core.G3Units.deg])
+                plt.xticks(range(self.nx+1)[::10], [f"{ra:.2f}" for ra in self.ra_edges[::10] / gu.deg], rotation=45)
+                plt.yticks(range(self.ny+1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / gu.deg])
                 plt.colorbar(label="DF")
                 plt.xlabel("RA (deg)")
                 plt.ylabel("DEC (deg)")
