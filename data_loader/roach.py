@@ -71,7 +71,7 @@ class RoachPass:
 
     def get_kid_cal_lamp_q(self, kid):
         """Obtain the sliced Q (quadrature) data for a given KID during the calibration lamp period"""
-        q_tod = dlib.loadKIDI(self.id, kid, self.dir_roach)
+        q_tod = dlib.loadKIDQ(self.id, kid, self.dir_roach)
         cal_start = slice_i_dict[self.id] + cal_i_offset
         cal_stop = slice_i_dict[self.id] + cal_f_offset
         q_sliced = q_tod[self.dat_align_indices[cal_start:cal_stop]]
