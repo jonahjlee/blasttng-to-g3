@@ -166,13 +166,64 @@ def add_radec_so3g(frame,
     frame[dec] = core.G3VectorDouble(y)
 
 
-def plot_ra_dec(frame, ra_key="ra", dec_key="dec"):
-    # skip any frame that doesn't contain the right key
-    if ra_key not in frame or dec_key not in frame:
-        return
+    def plot(self, ax=None):
+        with np.errstate(invalid='ignore'):
+            m = self.data / self.hits
+        if ax is not None:
+            ax.imshow(m, origin='lower')
+            ax.set_xticks(range(self.nx + 1)[::10], [f"{ra:.2f}" for ra in self.ra_edges[::10] / core.G3Units.deg],
+                          rotation=45)
+            ax.set_yticks(range(self.ny + 1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / core.G3Units.deg])
+            ax.set_xlabel("RA (deg)")
+            ax.set_ylabel("DEC (deg)")
+            ax.set_title("Combined Map")
+        else:
+            plt.imshow(m, origin='lower')
+            plt.xticks(range(self.nx + 1)[::10], [f"{ra:.2f}" for ra in self.ra_edges[::10] / core.G3Units.deg],
+                       rotation=45)
+            plt.yticks(range(self.ny + 1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / core.G3Units.deg])
+            plt.colorbar(label="DF")
+            plt.xlabel("RA (deg)")
+            plt.ylabel("DEC (deg)")
+            plt.title("Combined Map")
+            plt.show()
 
-    # plot coordinates in real units
-    plt.plot(frame[ra_key] / gu.deg, frame[dec_key] / gu.deg)
+units_srings: dict[float, str] = {
+    gu.deg: "deg",
+    gu.degree: "degree",
+    gu.degrees: "degrees",
+    gu.arcmin: "arcmin",
+    gu.arcsec: "arcsec",
+    gu.rahour: "rahour",
+    gu.raminute: "raminute",
+    gu.rasecond: "rasecond",
+    gu.rahr: "rahr",
+}
+class PlotRaDec:
+    def __init__(self, ra_key="ra", dec_key="dec", ax=None, units=None):
+        self.ra_key = ra_key
+        self.dec_key = dec_key
+        self.ax = ax
+        self.units = units if units is not None else gu.deg
+        self.units_str = units_srings[self.units]
+
+        self.ra_data: list[np.ndarray] = []
+        self.dec_data: list[np.ndarray] = []
+    def __call__(self, frame):
+        if frame.type == core.G3FrameType.Scan and self.ra_key in frame and self.dec_key in frame:
+            self.ra_data.append(np.asarray(frame[self.ra_key]))
+            self.dec_data.append(np.asarray(frame[self.dec_key]))
+        if frame.type == core.G3FrameType.EndProcessing:
+            ra: np.ndarray = np.concatenate(self.ra_data, axis=0).flatten()
+            dec: np.ndarray = np.concatenate(self.dec_data, axis=0).flatten()
+            if self.ax is not None:
+                self.ax.plot(ra / self.units, dec / self.units)
+                self.ax.set_xlabel(f"RA ({self.units_str})")
+                self.ax.set_ylabel(f"DEC ({self.units_str})")
+            else:
+                plt.plot(ra / self.units, dec / self.units)
+                plt.xlabel(f"RA ({self.units_str})")
+                plt.ylabel(f"DEC ({self.units_str})")
 
 
 # not a module, but used in DF modules below
@@ -414,9 +465,8 @@ class GenericPlotter:
             ax.set_ylabel(self.label)
             ax.set_title(self.label + " vs. index")
             plt.show()
-        if frame.type != core.G3FrameType.Scan:
-            return
-        self.timestreams.append(self.array_getter(frame))
+        if frame.type == core.G3FrameType.Scan:
+            self.timestreams.append(self.array_getter(frame))
 
 
 class TimeStreamPlotter(GenericPlotter):
