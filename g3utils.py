@@ -19,6 +19,14 @@ import astropy.units as au
 from spt3g.core import G3Units as gu
 from scipy.ndimage import gaussian_filter
 
+def ordinal(n: int):
+    """source: https://stackoverflow.com/questions/9647202/ordinal-numbers-replacement/20007730#20007730"""
+    if 11 <= (n % 100) <= 13:
+        suffix = 'th'
+    else:
+        suffix = ['th', 'st', 'nd', 'rd', 'th'][min(n % 10, 4)]
+    return str(n) + suffix
+
 class FrameCounter(core.G3Module):
     def __init__(self):
         super(FrameCounter, self).__init__()
@@ -37,20 +45,29 @@ class FrameCounter(core.G3Module):
         self.previous_type = type
 
 
-class FirstFrameGrabber:
-    """Stores the first frame of a given type"""
-    def __init__(self, frame_type: core.G3FrameType=None):
+class NthFrameGrabber:
+    """Stores the nth frame of a given type"""
+    def __init__(self, n=1, frame_type: core.G3FrameType=None):
+        self.n = n
         self.frame_type = frame_type if frame_type is not None else core.G3FrameType.Scan
-        self.first_frame = None
+        self.num_seen = 0
+        self.nth_frame = None
     def __call__(self, frame):
-        if self.first_frame is not None:
+        if self.nth_frame is not None:
             # already found the frame
             return
         if frame.type == self.frame_type:
-            self.first_frame = frame
-            print(f"Found the first frame with type: {self.frame_type}!")
+            self.num_seen += 1
+            if self.num_seen == self.n: self.nth_frame = frame
+            print(f"Found the {ordinal(self.n)} frame with type: {self.frame_type}!")
             print(f"The frame is now stored in {self}'s first_frame attribute.")
             return
+
+
+class FirstFrameGrabber(NthFrameGrabber):
+    """Stores the first frame of a given type"""
+    def __init__(self, frame_type: core.G3FrameType=None):
+        super().__init__(1, frame_type)
 
 
 class LastFrameGrabber:
@@ -519,6 +536,18 @@ class SingleMapBinner:
         # update data and hits, in-place
         self.data += np.histogram2d(y, x, bins=[self.dec_edges, self.ra_edges], weights=kid_ts)[0]
         self.hits += np.histogram2d(y, x, bins=[self.dec_edges, self.ra_edges])[0]
+
+
+rcw_92_min_lat = -77.110
+rcw_92_max_lat = -77.070
+rcw_92_min_lon = 162.20
+rcw_92_max_lon = 162.55
+rcw_92_min_alt = 36030
+rcw_92_max_alt = 36120
+rcw_92_avg_lat = rcw_92_min_lat / 2. + rcw_92_max_lat / 2.
+rcw_92_avg_lon = rcw_92_min_lon / 2. + rcw_92_max_lon / 2.
+rcw_92_avg_alt = rcw_92_min_alt / 2. + rcw_92_max_alt / 2.
+BLASTTNG_SITE = so3g.proj.EarthlySite(rcw_92_avg_lon, rcw_92_avg_lat, rcw_92_avg_alt)  # we could also add weather
 
 
 class MapBinner:
