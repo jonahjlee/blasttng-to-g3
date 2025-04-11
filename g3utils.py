@@ -58,9 +58,10 @@ class NthFrameGrabber:
             return
         if frame.type == self.frame_type:
             self.num_seen += 1
-            if self.num_seen == self.n: self.nth_frame = frame
-            print(f"Found the {ordinal(self.n)} frame with type: {self.frame_type}!")
-            print(f"The frame is now stored in {self}'s first_frame attribute.")
+            if self.num_seen == self.n:
+                self.nth_frame = frame
+                print(f"Found the {ordinal(self.n)} frame with type: {self.frame_type}!")
+                print(f"The frame is now stored in {self}'s first_frame attribute.")
             return
 
 
