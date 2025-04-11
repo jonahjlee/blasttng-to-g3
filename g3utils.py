@@ -436,8 +436,11 @@ class NormalizeDF():
         data = frame[self.in_key].data
         n_dets = data.shape[0]
 
+        # set the median of the normalized array to zero
         data_zeroed = data - self.detector_medians[:, None]
-        norm_df = data_zeroed / np.max(self.calframe[self.cal_df].data, axis=1)[:, None]
+
+        # scale such that the maximum during calibration is set to 1
+        norm_df = data_zeroed / np.max(data_zeroed, axis=1)[:, None]
 
         out_super_ts = so3g.G3SuperTimestream(
             frame[self.in_key].names,
