@@ -47,11 +47,12 @@ class FrameCounter(core.G3Module):
 
 class NthFrameGrabber:
     """Stores the nth frame of a given type"""
-    def __init__(self, n=1, frame_type: core.G3FrameType=None):
+    def __init__(self, n=1, frame_type: core.G3FrameType=None, verbose=False):
         self.n = n
         self.frame_type = frame_type if frame_type is not None else core.G3FrameType.Scan
         self.num_seen = 0
         self.nth_frame = None
+        self.verbose = verbose
     def __call__(self, frame):
         if self.nth_frame is not None:
             # already found the frame
@@ -60,15 +61,15 @@ class NthFrameGrabber:
             self.num_seen += 1
             if self.num_seen == self.n:
                 self.nth_frame = frame
+                if not self.verbose: return
                 print(f"Found the {ordinal(self.n)} frame with type: {self.frame_type}!")
-                print(f"The frame is now stored in {self}'s first_frame attribute.")
-            return
+                print(f"The frame is now stored in {self}'s nth_frame attribute.")
 
 
 class FirstFrameGrabber(NthFrameGrabber):
     """Stores the first frame of a given type"""
-    def __init__(self, frame_type: core.G3FrameType=None):
-        super().__init__(1, frame_type)
+    def __init__(self, frame_type: core.G3FrameType=None, verbose=False):
+        super().__init__(1, frame_type, verbose)
     @property
     def first_frame(self):
         return self.nth_frame
