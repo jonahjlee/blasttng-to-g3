@@ -69,6 +69,9 @@ class FirstFrameGrabber(NthFrameGrabber):
     """Stores the first frame of a given type"""
     def __init__(self, frame_type: core.G3FrameType=None):
         super().__init__(1, frame_type)
+    @property
+    def first_frame(self):
+        return self.nth_frame
 
 
 class LastFrameGrabber:
