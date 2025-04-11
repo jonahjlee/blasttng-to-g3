@@ -220,10 +220,12 @@ class PlotRaDec:
                 self.ax.plot(ra / self.units, dec / self.units)
                 self.ax.set_xlabel(f"RA ({self.units_str})")
                 self.ax.set_ylabel(f"DEC ({self.units_str})")
+                plt.show()
             else:
                 plt.plot(ra / self.units, dec / self.units)
                 plt.xlabel(f"RA ({self.units_str})")
                 plt.ylabel(f"DEC ({self.units_str})")
+                plt.show()
 
 
 # not a module, but used in DF modules below
