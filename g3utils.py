@@ -541,7 +541,8 @@ class SingleMapBinner:
 
         Returns: (x, y)
         """
-        zz = self.data / self.hits
+        with np.errstate(invalid='ignore'):
+            zz = self.data / self.hits
 
         # gaussian smoothing
         smoothing_kernel = 2  # in pixel coords
