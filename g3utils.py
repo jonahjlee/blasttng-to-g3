@@ -562,8 +562,8 @@ class SingleMapBinner:
             ax.set_xticks(range(self.nx + 1)[::10], [f"{ra:.2f}" for ra in self.ra_edges[::10] / core.G3Units.deg],
                           rotation=45)
             ax.set_yticks(range(self.ny + 1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / core.G3Units.deg])
-            ax.set_xlabel("RA (deg)")
-            ax.set_ylabel("DEC (deg)")
+            ax.set_xlabel("Boresight RA (deg)")
+            ax.set_ylabel("Boresight DEC (deg)")
             ax.set_title(f"{self.kid}")
             ax.plot(*source_coords, 'ro')
         else:
@@ -572,8 +572,8 @@ class SingleMapBinner:
                        rotation=45)
             plt.yticks(range(self.ny + 1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / core.G3Units.deg])
             plt.colorbar(label="DF")
-            plt.xlabel("RA (deg)")
-            plt.ylabel("DEC (deg)")
+            plt.xlabel("Boresight RA (deg)")
+            plt.ylabel("Boresight DEC (deg)")
             plt.title(f"{self.kid}")
             plt.plot(*source_coords, 'ro')
             plt.show()
