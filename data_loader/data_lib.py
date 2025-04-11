@@ -189,7 +189,7 @@ def loadKIDQ(roach, kid, dir_roach) -> np.memmap:
     '''Preps KID Q (quadrature) for on-demand loading.
     '''
 
-    Q: np.memmap = np.load(dir_roach + f'i_kid{kid}_roach{roach}.npy',
+    Q: np.memmap = np.load(dir_roach + f'q_kid{kid}_roach{roach}.npy',
                 allow_pickle=False, mmap_mode='r')
 
     return Q
