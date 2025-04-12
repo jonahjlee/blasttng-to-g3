@@ -469,36 +469,18 @@ class GenericPlotter:
         self.array_getter = array_getter
         self.timestreams: list[np.ndarray] = []
         self.label = label if label is not None else self.array_getter.__name__
-        self.ax = ax
+        self.ax = ax if ax is not None else plt.gca()
         self.show = show
-
-    def quiet_plot(self):
-        flatts: np.ndarray = np.concatenate(self.timestreams, axis=0).flatten()
-        if self.ax is not None:
-            self.ax.plot(flatts)
-        else:
-            plt.plot(flatts)
-
-    def plot_and_show(self):
-        flatts: np.ndarray = np.concatenate(self.timestreams, axis=0).flatten()
-        if self.ax is not None:
-            self.ax.plot(flatts)
-            self.ax.set_xlabel("index")
-            self.ax.set_ylabel(self.label)
-            self.ax.set_title(self.label + " vs. index")
-        else:
-            plt.plot(flatts)
-            plt.xlabel("index")
-            plt.ylabel(self.label)
-            plt.title(self.label + " vs. index")
-        plt.show()
 
     def __call__(self, frame):
         if frame.type == core.G3FrameType.EndProcessing:
-            if self.show:
-                self.plot_and_show()
-            else:
-                self.quiet_plot()
+            flatts: np.ndarray = np.concatenate(self.timestreams, axis=0).flatten()
+            self.ax.plot(flatts)
+            if not self.show: return
+            self.ax.set_xlabel("index")
+            self.ax.set_ylabel(self.label)
+            self.ax.set_title(self.label + " vs. index")
+            plt.show()
         if frame.type == core.G3FrameType.Scan:
             self.timestreams.append(self.array_getter(frame))
 
