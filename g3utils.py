@@ -455,34 +455,61 @@ class NormalizeDF():
 
 
 class GenericPlotter:
-    def __init__(self, array_getter=None, label: str=None, subplots_args: dict=None, plot_args: dict=None):
-        """array_getter is a callable which takes in a frame and returns an array-like object to plot"""
+    def __init__(self, array_getter=None, label: str=None, ax=None, show=True):
+        """Helper module to plot data in a G3Pipeline. Accumulates the data from array_getter into a 1-d array
+        for the entire pipeline, then plots the data when an EndProcessing frame is encountered.
+
+        :param array_getter: a callable which takes in a frame and returns an array-like object to plot
+        :param label: a label for the plot y-axis and title
+        :param ax: a matplotlib axes object. If `None`, use the Matplotlib implicit interface
+        (e.g. plt.plot instead of ax.plot). Default: None.
+        :param show: If `True`, add labels and show when an EndProcessing frame is reached.
+        """
         assert array_getter is not None, "GenericPlotter was not given an array_getter"
         self.array_getter = array_getter
         self.timestreams: list[np.ndarray] = []
         self.label = label if label is not None else self.array_getter.__name__
-        self.subplots_args = subplots_args if subplots_args is not None else {}
-        self.plot_args = plot_args if plot_args is not None else {}
+        self.ax = ax
+        self.show = show
+
+    def quiet_plot(self):
+        flatts: np.ndarray = np.concatenate(self.timestreams, axis=0).flatten()
+        if self.ax is not None:
+            self.ax.plot(flatts)
+        else:
+            plt.plot(flatts)
+
+    def plot_and_show(self):
+        flatts: np.ndarray = np.concatenate(self.timestreams, axis=0).flatten()
+        if self.ax is not None:
+            self.ax.plot(flatts)
+            self.ax.set_xlabel("index")
+            self.ax.set_ylabel(self.label)
+            self.ax.set_title(self.label + " vs. index")
+        else:
+            plt.plot(flatts)
+            plt.xlabel("index")
+            plt.ylabel(self.label)
+            plt.title(self.label + " vs. index")
+        plt.show()
+
     def __call__(self, frame):
         if frame.type == core.G3FrameType.EndProcessing:
-            flatts: np.ndarray = np.concatenate(self.timestreams, axis=0).flatten()
-            fig, ax = plt.subplots(**self.subplots_args)
-            ax.plot(flatts, **self.plot_args)
-            ax.set_xlabel("index")
-            ax.set_ylabel(self.label)
-            ax.set_title(self.label + " vs. index")
-            plt.show()
+            if self.show:
+                self.plot_and_show()
+            else:
+                self.quiet_plot()
         if frame.type == core.G3FrameType.Scan:
             self.timestreams.append(self.array_getter(frame))
 
 
 class TimeStreamPlotter(GenericPlotter):
-    def __init__(self, ts_key=None, label: str=None, subplots_args: dict=None, plot_args: dict=None):
+    def __init__(self, ts_key=None, label: str=None, ax=None, show=True):
         assert ts_key is not None, "TimeStreamPlotter was not given a ts_key"
         self.ts_key = ts_key
         def timestream_array_getter(frame):
             return np.array(frame[self.ts_key])
-        super().__init__(timestream_array_getter, label=label, subplots_args=subplots_args, plot_args=plot_args)
+        super().__init__(timestream_array_getter, label=None, ax=None, show=True)
 
 
 def remove_common_mode(frame):
