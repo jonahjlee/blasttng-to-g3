@@ -461,8 +461,7 @@ class GenericPlotter:
 
         :param array_getter: a callable which takes in a frame and returns an array-like object to plot
         :param label: a label for the plot y-axis and title
-        :param ax: a matplotlib axes object. If `None`, use the Matplotlib implicit interface
-        (e.g. plt.plot instead of ax.plot). Default: None.
+        :param ax: a matplotlib axes object. If `None`, uses `plt.gca()`
         :param show: If `True`, add labels and show when an EndProcessing frame is reached.
         """
         assert array_getter is not None, "GenericPlotter was not given an array_getter"
