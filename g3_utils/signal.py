@@ -1,5 +1,5 @@
-import so3g
 from spt3g import core
+import so3g
 import numpy as np
 
 class DetectorStats:

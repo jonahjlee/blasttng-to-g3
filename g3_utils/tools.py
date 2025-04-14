@@ -2,6 +2,26 @@ from spt3g import core
 import numpy as np
 import matplotlib.pyplot as plt
 from spt3g.core import G3Units as gu
+import re
+
+def kid_string(kid, roach_id: int):
+    if isinstance(kid, int):
+        if kid > 10000:
+            raise ValueError("kid int ids cannot exceed 4 digits!")
+        return f"roach{roach_id}_{kid:04}"
+    if isinstance(kid, float):
+        return kid_string(int(kid), roach_id)
+    if isinstance(kid, str):
+        pattern = r"^roach" + str(roach_id) + r"_\d{4}$"
+        if re.match(pattern, kid):
+            # string is correct, e.g. 'roach1_0123', 'roach4_0211'
+            return kid
+        try:
+            # string may represent a KID, e.g. '3', '0003' '000003', '3.0'
+            return kid_string(int(float(kid)), roach_id)
+        except ValueError:
+            raise ValueError(f"String '{kid}' did not match '{pattern}' and could not be parsed as an int!")
+    raise TypeError("`kid` must be an int, float or a string!")
 
 
 def ordinal(n: int):
@@ -107,7 +127,6 @@ class PlotRaDec:
                 self.ax.plot(ra / self.units, dec / self.units)
                 self.ax.set_xlabel(f"RA ({self.units_str})")
                 self.ax.set_ylabel(f"DEC ({self.units_str})")
-                plt.show()
             else:
                 plt.plot(ra / self.units, dec / self.units)
                 plt.xlabel(f"RA ({self.units_str})")
