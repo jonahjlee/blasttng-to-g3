@@ -1,8 +1,3 @@
-import coords
-import maps
-import signal
-import tools
-
 from .coords import add_radec_astropy, add_radec_so3g
 from .maps import BLASTTNG_SITE, SingleMapBinner, MapBinner
 from .tools import (FrameCounter, NthFrameGrabber, FirstFrameGrabber, LastFrameGrabber,
