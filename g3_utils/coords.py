@@ -1,3 +1,12 @@
+# ============================================================================ #
+# coords.py
+#
+# Jonah Lee
+#
+# G3 pipeline modules to help with astronomical coordinate transformations,
+# mainly converting Az/El to RA/Dec
+# ============================================================================ #
+
 import so3g
 from spt3g import core
 from astropy.coordinates import EarthLocation, SkyCoord
@@ -10,12 +19,17 @@ def add_radec_astropy(frame,
                       az: str="az", el: str="el",
                       lat: str="lat", lon: str="lon",
                       alt: str="alt",
-                      data: str="data",
                       ra: str="ra", dec: str="dec"):
-    """Use astropy coordinate transformations to convert az/el --> ra/dec.
+    """
+    Use astropy coordinate transformations to convert az/el --> ra/dec.
 
-    Keyword arguments indicate keys in the scan frame for inputs/outputs
-    Requires lat/lon/alt to determine the telescope location as an input to astropy.coordinates.SkyCoord
+    :param az: Key for azimuth G3Timestream in scan frame
+    :param el: Key for elevation angle G3Timestream in scan frame
+    :param lat: Key for latitude G3Timestream in scan frame
+    :param lon: Key for longitude G3Timestream in scan frame
+    :param alt: Key for altitude G3Timestream in scan frame
+    :param ra: Key in which to output right ascension G3Timestream in scan frame
+    :param dec: Key in which to output declination G3Timestream in scan frame
     """
     if frame.type != core.G3FrameType.Scan:
         return
@@ -26,7 +40,7 @@ def add_radec_astropy(frame,
     lon_deg = np.array(frame[lon]) / gu.deg
     alt_m = np.array(frame[alt]) / gu.m
 
-    unix_times = np.array(frame[data].times) / gu.s
+    unix_times = np.array(frame[az].times) / gu.s
     times = Time(unix_times, format="unix")
 
     blasttng_loc = EarthLocation(lat=lat_deg, lon=lon_deg, height=alt_m)
@@ -35,8 +49,8 @@ def add_radec_astropy(frame,
                           obstime=times,
                           frame='altaz',
                           location=blasttng_loc)
-    t_i = frame[data].times[0]
-    t_f = frame[data].times[-1]
+    t_i = frame[az].start
+    t_f = frame[az].stop
 
     ra_ts = core.G3Timestream(sky_coords.icrs.ra.deg * gu.deg)
     ra_ts.start = t_i
@@ -52,8 +66,25 @@ def add_radec_so3g(frame,
                    az: str="az", el: str="el",
                    lat: str="lat", lon: str="lon",
                    alt: str="alt",
-                   data: str="data",
                    ra: str="ra", dec: str="dec"):
+    """
+    Use so3g coordinate transformations to convert az/el --> ra/dec.
+
+    Telescope location passed into `so3g.proj.CelestialSightLine` is given by the average of
+    the location at the start of frame and end of frame.
+
+    Uses `so3g.proj.CelestialSightLine.naive_az_el`, which does not account for weather in calculations:
+
+        "This will be off by several arcminutes… but less than a degree. The weather is ignored."
+
+    :param az: Key for azimuth G3Timestream in scan frame
+    :param el: Key for elevation angle G3Timestream in scan frame
+    :param lat: Key for latitude G3Timestream in scan frame
+    :param lon: Key for longitude G3Timestream in scan frame
+    :param alt: Key for altitude G3Timestream in scan frame
+    :param ra: Key in which to output right ascension G3Timestream in scan frame
+    :param dec: Key in which to output declination G3Timestream in scan frame
+    """
     if frame.type != core.G3FrameType.Scan:
         return
 
@@ -67,7 +98,7 @@ def add_radec_so3g(frame,
 
     # coords() returns an array with shape (n_time, 4); each 4-tuple contains values (lon, lat, cos(gamma), sin(gamma))
     # Construct a CelestialSightLine to az_el to on-sky coords
-    times = np.array(frame[data].times) / gu.s
+    times = np.array(frame[az].times) / gu.s
     csl = so3g.proj.CelestialSightLine.naive_az_el(
         times,
         frame[az] / gu.rad,
