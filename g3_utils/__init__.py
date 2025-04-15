@@ -1,22 +1,22 @@
 from .coords import add_radec_astropy, add_radec_so3g
-from .maps import BLASTTNG_SITE, SingleMapBinner, MapBinner
+from .maps import SingleMapBinner, MapBinner
 from .tools import (kid_string, FrameCounter, NthFrameGrabber, FirstFrameGrabber,
-                    LastFrameGrabber, PlotRaDec, GenericPlotter, TimeStreamPlotter)
+                    LastFrameGrabber, PlotRaDec, GenericPlotter, TimestreamPlotter)
 from .signal import (DetectorStats, df_iqangle, add_cal_lamp_df, AddScanDF,
-                     AddSingleKidDF, naive_normalize_df, NormalizeDF, remove_common_mode)
+                     naive_normalize_df, NormalizeDF, remove_common_mode)
 
 __all__ = [
     # coords
     'kid_string', 'add_radec_astropy', 'add_radec_so3g',
 
     # maps
-    'BLASTTNG_SITE', 'SingleMapBinner', 'MapBinner',
+    'SingleMapBinner', 'MapBinner',
 
     # tools
     'FrameCounter', 'NthFrameGrabber', 'FirstFrameGrabber', 'LastFrameGrabber',
-    'PlotRaDec', 'GenericPlotter', 'TimeStreamPlotter',
+    'PlotRaDec', 'GenericPlotter', 'TimestreamPlotter',
 
     # signal
     'DetectorStats', 'df_iqangle', 'add_cal_lamp_df', 'AddScanDF',
-    'AddSingleKidDF', 'naive_normalize_df', 'NormalizeDF', 'remove_common_mode'
+    'naive_normalize_df', 'NormalizeDF', 'remove_common_mode'
 ]

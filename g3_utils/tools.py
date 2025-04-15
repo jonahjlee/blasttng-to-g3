@@ -6,6 +6,15 @@ import re
 
 
 def kid_string(kid, roach_id: int):
+    """
+    Convert a kid and roach ID to a string identifier, e.g. "roach1_0000".
+    The resulting string will match the pattern ^roach[1-5]_\d{4}$.
+    :param kid: float, int, or string. If this is a string, it must either:
+                - already be correct (in which case it is returned unchanged)
+                - be convertible to a float then an int.
+                If this is an int, it must be between 0-9999.
+    :param roach_id: int from 1-5
+    """
     if isinstance(kid, int):
         if kid > 10000:
             raise ValueError("kid int ids cannot exceed 4 digits!")
@@ -35,6 +44,12 @@ def ordinal(n: int):
 
 
 class FrameCounter(core.G3Module):
+    """
+    G3 pipeline module
+
+    Counts the frame types that pass through this module. Useful as a progress indicator since it updates live.
+    Stacks and counts sequential frames of the same type.
+    """
     def __init__(self):
         super(FrameCounter, self).__init__()
         self.previous_type = None
@@ -108,10 +123,22 @@ units_srings: dict[float, str] = {
     gu.rahr: "rahr",
 }
 class PlotRaDec:
+    """
+    G3 pipeline module.
+    Plots boresight RA vs. Dec when EndProcessing is reached.
+    """
     def __init__(self, ra_key="ra", dec_key="dec", ax=None, units=None):
+        """
+        Instantiate a PlotRaDec module.
+
+        :param ra_key: Key to right ascension G3Timestream in scan frames
+        :param dec_key: Key to declination G3Timestream in scan frames
+        :param ax: Axes object to plot to. If `None` (default), uses `plt.gca()`.
+        :param units: Angular G3Units units to use. Default: degrees.
+        """
         self.ra_key = ra_key
         self.dec_key = dec_key
-        self.ax = ax
+        self.ax = ax if ax is not None else plt.gca()
         self.units = units if units is not None else gu.deg
         self.units_str = units_srings[self.units]
 
@@ -124,21 +151,21 @@ class PlotRaDec:
         if frame.type == core.G3FrameType.EndProcessing:
             ra: np.ndarray = np.concatenate(self.ra_data, axis=0).flatten()
             dec: np.ndarray = np.concatenate(self.dec_data, axis=0).flatten()
-            if self.ax is not None:
-                self.ax.plot(ra / self.units, dec / self.units)
-                self.ax.set_xlabel(f"RA ({self.units_str})")
-                self.ax.set_ylabel(f"DEC ({self.units_str})")
-            else:
-                plt.plot(ra / self.units, dec / self.units)
-                plt.xlabel(f"RA ({self.units_str})")
-                plt.ylabel(f"DEC ({self.units_str})")
-                plt.show()
+            self.ax.plot(ra / self.units, dec / self.units)
+            self.ax.set_xlabel(f"RA ({self.units_str})")
+            self.ax.set_ylabel(f"DEC ({self.units_str})")
 
 
 class GenericPlotter:
+    """
+    G3 pipeline module
+
+    Plots data in a G3Pipeline. Accumulates the data from array_getter into a 1-d array
+    for the entire pipeline, then plots the data when an EndProcessing frame is encountered.
+    """
     def __init__(self, array_getter=None, label: str=None, ax=None, show=True):
-        """Helper module to plot data in a G3Pipeline. Accumulates the data from array_getter into a 1-d array
-        for the entire pipeline, then plots the data when an EndProcessing frame is encountered.
+        """
+        Instantiate a GenericPlotter
 
         :param array_getter: a callable which takes in a frame and returns an array-like object to plot
         :param label: a label for the plot y-axis and title
@@ -166,9 +193,23 @@ class GenericPlotter:
             self.timestreams.append(self.array_getter(frame))
 
 
-class TimeStreamPlotter(GenericPlotter):
+class TimestreamPlotter(GenericPlotter):
+    """
+    G3 pipeline module
+
+    Plots G3Timestream data in a G3Pipeline. Accumulates data under a specified key in scan frames
+    for the entire pipeline, then plots the data when an EndProcessing frame is encountered.
+    """
     def __init__(self, ts_key=None, label: str=None, ax=None, show=True):
-        assert ts_key is not None, "TimeStreamPlotter was not given a ts_key"
+        """
+        Instantiate a TimestreamPlotter
+
+        :param ts_key: the key in scan frames for the G3Timestream data to plot
+        :param label: a label for the plot y-axis and title
+        :param ax: a matplotlib axes object. If `None`, uses `plt.gca()`
+        :param show: If `True`, add labels and show when an EndProcessing frame is reached.
+        """
+        assert ts_key is not None, "TimestreamPlotter was not given a ts_key"
         self.ts_key = ts_key
         def timestream_array_getter(frame):
             return np.array(frame[self.ts_key])
