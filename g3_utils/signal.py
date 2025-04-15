@@ -159,33 +159,56 @@ class AddScanDF:
         frame[self.out_key] = df_super_timestream
 
 
-def naive_normalize_df(frame, detector_medians=None, detector_stds=None):
-    """Normalize tods by setting median to zero and stdev to 1"""
+def naive_normalize_df(frame,
+                       detector_medians: dict[str, float]=None, detector_stds: dict[str, float]=None,
+                       in_key="df", out_key="norm_df"):
+    """
+    G3 pipeline module.
+    Normalizes tods by setting median to zero and stdev to 1
+
+    :param frame: G3FrameObject passed in automatically by pipeline.
+    :param detector_medians: Mapping from detector identifiers (^roach[1-5]_\d{4}$) to detector signal median value.
+    :param detector_stds: Mapping from detector identifiers (^roach[1-5]_\d{4}$) to detector signal standard deviation.
+    :param in_key: Key to input G3SuperTimestream in scan frame.
+    :param out_key: Key to output G3SuperTimestream into in scan frame.
+    """
     if frame.type != core.G3FrameType.Scan:
         return
 
     # data has shape (n_dets, n_samps)
-    data = frame["df"].data
+    data = frame[in_key].data
     n_dets = data.shape[0]
 
     data_zeroed = data - detector_medians[:, None]
     norm_df = data_zeroed / detector_stds[:, None]
 
     out_super_ts = so3g.G3SuperTimestream(
-        frame["df"].names,
-        frame["df"].times,
+        frame[in_key].names,
+        frame[in_key].times,
         norm_df,
         np.ones(n_dets) * 0.00001,  # quanta - float resolution when compressed, current val is arbitrary
     )
 
-    frame["norm_df"] = out_super_ts
+    frame[out_key] = out_super_ts
 
 
 class NormalizeDF():
-    def __init__(self, detector_medians=None, in_key="df", out_key="norm_df", cal_df="cal_lamp_df"):
+    """
+    G3 pipeline module.
+    Normalizes tods by setting median to zero and calibration lamp max to 1
+    """
+    def __init__(self, detector_medians=None, in_key="df", out_key="norm_df", cal_df_key="cal_lamp_df"):
+        """
+        Instantiate an NormalizeDF module
+
+        :param detector_medians: Mapping from detector identifiers (^roach[1-5]_\d{4}$) to detector signal median value.
+        :param in_key: Key to input G3SuperTimestream in scan frame.
+        :param out_key: Key to output G3SuperTimestream into in scan frame.
+        :param cal_df_key: Key to calibration lamp DF G3SuperTimestream in calibration frame.
+        """
         self.in_key = in_key
         self.out_key = out_key
-        self.cal_df = cal_df
+        self.cal_df = cal_df_key
         self.calframe = None
         self.detector_medians = detector_medians
 
@@ -219,13 +242,23 @@ class NormalizeDF():
         frame[self.out_key] = out_super_ts
 
 
-def remove_common_mode(frame):
+def remove_common_mode(frame, in_key="df", out_key="df_ctremoved", ct_key=None):
+    """
+    G3 pipeline module.
+    Removes the commmon-mode c(t) from detector timestreams.
+
+    :param frame: G3FrameObject passed in automatically by pipeline.
+    :param in_key: Key to input DF G3SuperTimestream in scan frame.
+    :param out_key: Key to c(t) removed DF G3SuperTimestream into in scan frame.
+    :param ct_key: Optional - key in which to store the common-mode as a G3Timestream.
+                   If this is `None` (default), do not store the common-mode.
+    """
     # skip frames that don't contain the input key
-    if "df" not in frame:
+    if in_key not in frame:
         return
 
     # get the input timestream data
-    ts_in: so3g.G3SuperTimestream = frame["df"]
+    ts_in: so3g.G3SuperTimestream = frame[in_key]
 
     # use broadcast to remove common-mode from all timestreams
     tsarr: np.ndarray[np.f64] = ts_in.data
@@ -241,5 +274,5 @@ def remove_common_mode(frame):
     common_mode.stop = ts_in.times[-1]
 
     # store the calibrated timestreams to the output key in the frame
-    frame["df_ctremoved"] = df_ctremoved
-    frame["common_mode"] = common_mode
+    frame[out_key] = df_ctremoved
+    if ct_key is not None: frame[ct_key] = common_mode
