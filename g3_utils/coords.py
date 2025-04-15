@@ -15,6 +15,7 @@ from spt3g.core import G3Units as gu
 import astropy.units as au
 import numpy as np
 
+
 def add_radec_astropy(frame,
                       az: str="az", el: str="el",
                       lat: str="lat", lon: str="lon",
@@ -62,6 +63,7 @@ def add_radec_astropy(frame,
     dec_ts.start = t_i
     dec_ts.stop = t_f
     frame[dec] = dec_ts
+
 
 def add_radec_so3g(frame,
                    az: str="az", el: str="el",

@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from spt3g.core import G3Units as gu
 import re
 
+
 def kid_string(kid, roach_id: int):
     if isinstance(kid, int):
         if kid > 10000:
