@@ -18,7 +18,7 @@ class DetectorStats:
 
     Stores a `medians` and `stds` attribute, which have shape (n_scans, n_dets)
     """
-    def __init__(self, data_key: str = "df"):
+    def __init__(self, data_key: str="df"):
         """
         Instantiate a DetectorStats object
 
@@ -72,36 +72,42 @@ def df_iqangle(I, Q, If, Qf, Ff, i_f_theta=None):
     return df / Ff[i_f_theta]
 
 
-def add_cal_lamp_df(frame, roach_id=1, iq_key="data"):
+def add_cal_lamp_df(frame, iq_key: str="cal_lamp_data", out_key="cal_lamp_df"):
+    """
+    G3 pipeline module.
+    Compute DF (delta-frequency) for the calibration lamp data stored in the calibration frame.
+
+    :param frame: G3FrameObject passed in automatically by pipeline.
+    :param iq_key: Key to G3SuperTimestream in calibration frame.
+    :param out_key: Key to output DF G3SuperTimestream into in calibration frame.
+    """
     if frame.type != core.G3FrameType.Calibration:
         return
 
     super_ts = frame[iq_key]
-
-    kids = set([id_str[-6:-2] for id_str in super_ts.names])
+    # Cut off "_I"/"_Q" from names --> e.g. ["roach1_0000", ...]
+    kids = list(set([id_str[:-2] for id_str in super_ts.names]))
     df_data = np.zeros((len(kids), super_ts.data.shape[1]))
-    names = []
     for i, kid in enumerate(kids):
-        i_idx = int(np.where(np.asarray(super_ts.names) == f"roach{roach_id}_{kid}_I")[0][0])
-        q_idx = int(np.where(np.asarray(super_ts.names) == f"roach{roach_id}_{kid}_Q")[0][0])
+        i_idx = int(np.where(np.asarray(super_ts.names) == f"{kid}_I")[0][0])
+        q_idx = int(np.where(np.asarray(super_ts.names) == f"{kid}_Q")[0][0])
         kid_i = super_ts.data[i_idx]
         kid_q = super_ts.data[q_idx]
 
         # load target sweeps
-        If = np.array(frame["target_sweeps"][f"roach{roach_id}_{kid}_I"])
-        Qf = np.array(frame["target_sweeps"][f"roach{roach_id}_{kid}_Q"])
-        Ff = np.array(frame["target_sweeps"][f"roach{roach_id}_{kid}_F"])
+        If = np.array(frame["target_sweeps"][f"{kid}_I"])
+        Qf = np.array(frame["target_sweeps"][f"{kid}_Q"])
+        Ff = np.array(frame["target_sweeps"][f"{kid}_F"])
 
         # build df tod
-        names.append(f"roach{roach_id}_{kid}")
         df_data[i] = df_iqangle(kid_i, kid_q, If, Qf, Ff)
 
     times = super_ts.times
     quanta = np.ones(len(kids)) * np.std(df_data) / 10_000
 
-    df_super_ts = so3g.G3SuperTimestream(names, times, df_data, quanta)
+    df_super_ts = so3g.G3SuperTimestream(kids, times, df_data, quanta)
 
-    frame["cal_lamp_df"] = df_super_ts
+    frame[out_key] = df_super_ts
 
 
 class AddSingleKidDF:
