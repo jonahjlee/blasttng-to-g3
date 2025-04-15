@@ -3,7 +3,7 @@
 #
 # Jonah Lee
 #
-# Miscellaneous tools for G3 TOD processing
+# Various tools for G3 TOD processing
 # ============================================================================ #
 
 from spt3g import core
@@ -72,21 +72,19 @@ def df_iqangle(I, Q, If, Qf, Ff, i_f_theta=None):
     return df / Ff[i_f_theta]
 
 
-def add_cal_lamp_df(frame, iq_key: str="cal_lamp_data", out_key="cal_lamp_df"):
+def compute_df_data(kids: list[str], super_ts, target_sweeps) -> np.ndarray:
     """
-    G3 pipeline module.
-    Compute DF (delta-frequency) for the calibration lamp data stored in the calibration frame.
+    Note: This is not a G3 pipeline module. See `add_cal_lamp_df` and `AddScanDF`, which call this function internally.
+    Computes a DF (delta-frequency) ndarray with shape (n_dets, n_samps).
 
-    :param frame: G3FrameObject passed in automatically by pipeline.
-    :param iq_key: Key to G3SuperTimestream in calibration frame.
-    :param out_key: Key to output DF G3SuperTimestream into in calibration frame.
+    :param kids: List of names of kids, e.g. "roach1_0000". Names should match `^roach[1-5]_\d{4}$`, and their order
+                 will be preserved as the indices for axis 0 in the resulting 2d ndarray.
+    :param super_ts: G3SuperTimestream containing KID I/Q data. Names are like above, except there are twice
+                     as many because half have '_I' appended to indicate in-phase and half have '_Q' appended to indicate
+                     quadrature
+    :param target_sweeps: G3TimestreamMap containing calibration sweep data with indices appended by '_I', '_Q' or '_F'.
+    :return: a DF ndarray with shape (n_dets, n_samps).
     """
-    if frame.type != core.G3FrameType.Calibration:
-        return
-
-    super_ts = frame[iq_key]
-    # Cut off "_I"/"_Q" from names --> e.g. ["roach1_0000", ...]
-    kids = list(set([id_str[:-2] for id_str in super_ts.names]))
     df_data = np.zeros((len(kids), super_ts.data.shape[1]))
     for i, kid in enumerate(kids):
         i_idx = int(np.where(np.asarray(super_ts.names) == f"{kid}_I")[0][0])
@@ -94,101 +92,71 @@ def add_cal_lamp_df(frame, iq_key: str="cal_lamp_data", out_key="cal_lamp_df"):
         kid_i = super_ts.data[i_idx]
         kid_q = super_ts.data[q_idx]
 
-        # load target sweeps
-        If = np.array(frame["target_sweeps"][f"{kid}_I"])
-        Qf = np.array(frame["target_sweeps"][f"{kid}_Q"])
-        Ff = np.array(frame["target_sweeps"][f"{kid}_F"])
+        If = np.array(target_sweeps[f"{kid}_I"])
+        Qf = np.array(target_sweeps[f"{kid}_Q"])
+        Ff = np.array(target_sweeps[f"{kid}_F"])
 
-        # build df tod
         df_data[i] = df_iqangle(kid_i, kid_q, If, Qf, Ff)
+    return df_data
 
+
+def add_cal_lamp_df(frame, iq_key: str="cal_lamp_data", target_sweeps_key="target_sweeps", out_key="cal_lamp_df"):
+    """
+    G3 pipeline module.
+    Compute DF (delta-frequency) for the calibration lamp data stored in the calibration frame.
+
+    :param frame: G3FrameObject passed in automatically by pipeline.
+    :param iq_key: Key to I/Q G3SuperTimestream in calibration frame.
+    :param out_key: Key to output DF G3SuperTimestream into in calibration frame.
+    """
+    if frame.type != core.G3FrameType.Calibration:
+        return
+
+    super_ts = frame[iq_key]
+
+    kids = list({id_str[:-2] for id_str in super_ts.names})
     times = super_ts.times
+    df_data = compute_df_data(kids, super_ts, frame[target_sweeps_key])
     quanta = np.ones(len(kids)) * np.std(df_data) / 10_000
 
     df_super_ts = so3g.G3SuperTimestream(kids, times, df_data, quanta)
-
     frame[out_key] = df_super_ts
 
 
-class AddSingleKidDF:
-    def __init__(self, roach_id=1, kid="0000"):
-        self.roach_id = roach_id
-        self.kid = kid
-        self.calframe = None
-
-    def __call__(self, frame):
-        if frame.type == core.G3FrameType.Calibration:
-            self.calframe = frame
-        if frame.type != core.G3FrameType.Scan:
-            return
-        assert self.calframe is not None, "failed to process scan frame: missing prior calibration frame!"
-
-        # load I and Q
-        ts: so3g.G3SuperTimestream = frame["data"]
-        i_idx = int(np.where(np.asarray(ts.names) == f"roach{self.roach_id}_{self.kid}_I")[0][0])
-        q_idx = int(np.where(np.asarray(ts.names) == f"roach{self.roach_id}_{self.kid}_Q")[0][0])
-        kid_i = ts.data[i_idx]
-        kid_q = ts.data[q_idx]
-
-        # load target sweeps
-        If = np.array(self.calframe["target_sweeps"][f"roach{self.roach_id}_{self.kid}_I"])
-        Qf = np.array(self.calframe["target_sweeps"][f"roach{self.roach_id}_{self.kid}_Q"])
-        Ff = np.array(self.calframe["target_sweeps"][f"roach{self.roach_id}_{self.kid}_F"])
-
-        # build df tod
-        df_tod = df_iqangle(kid_i, kid_q, If, Qf, Ff)
-
-        t_i = frame["data"].times[0]
-        t_f = frame["data"].times[-1]
-
-        df_ts = core.G3Timestream(df_tod)
-        df_ts.start = t_i
-        df_ts.stop = t_f
-        frame[f"roach{self.roach_id}_{self.kid}_DF"] = df_ts
-
-
 class AddScanDF:
-    def __init__(self, roach_id=1):
-        self.roach_id = roach_id
+    """
+    G3 pipeline module.
+    Compute DF (delta-frequency) data for all scan frames.
+    """
+    def __init__(self, iq_key="data", target_sweeps_key="target_sweeps", out_key="df"):
+        """
+        Instantiate an AddScanDF object
+
+        :param iq_key: Key to I/Q G3SuperTimestream in scan frame.
+        :param target_sweeps_key: Key to calibration sweep G3SuperTimestream in the calibration frame.
+        :param out_key: Key to output DF G3SuperTimestream into in scan frame.
+        """
         self.calframe = None
+        self.iq_key = iq_key
+        self.target_sweeps_key = target_sweeps_key
+        self.out_key = out_key
 
     def __call__(self, frame):
         if frame.type == core.G3FrameType.Calibration:
             self.calframe = frame
         if frame.type != core.G3FrameType.Scan:
             return
+
         assert self.calframe is not None, "failed to process scan frame: missing prior calibration frame!"
+        target_sweeps = self.calframe[self.target_sweeps_key]
 
-        # get an arbitrarily ordered list of unique kids from calframe keys
-        kids: list[str] = list({key[7:11] for key in self.calframe["target_sweeps"].keys()})
+        kids = list({id_str[:-2] for id_str in target_sweeps.keys()})
+        times = frame[self.iq_key].times
+        df_data = compute_df_data(kids, frame[self.iq_key], target_sweeps)
+        quanta = (np.abs(df_data).max() / 10_000) * np.ones(len(kids))
 
-        # inputs to G3SuperTimestream constructor
-        times: core.G3VectorTime = frame["data"].times  # same timestamps as I/Q data
-        names: list[str] = []
-        df_data: np.ndarray = np.zeros(shape=(len(kids), len(times)))
-
-        for i, kid in enumerate(kids):
-            # load I and Q
-            ts: so3g.G3SuperTimestream = frame["data"]
-            i_idx = int(np.where(np.asarray(ts.names) == f"roach{self.roach_id}_{kid}_I")[0][0])
-            q_idx = int(np.where(np.asarray(ts.names) == f"roach{self.roach_id}_{kid}_Q")[0][0])
-            kid_i = ts.data[i_idx]
-            kid_q = ts.data[q_idx]
-            # load target sweeps
-            If = np.array(self.calframe["target_sweeps"][f"roach{self.roach_id}_{kid}_I"])
-            Qf = np.array(self.calframe["target_sweeps"][f"roach{self.roach_id}_{kid}_Q"])
-            Ff = np.array(self.calframe["target_sweeps"][f"roach{self.roach_id}_{kid}_F"])
-            # build df tod and update names/df_data
-            df_data[i] = df_iqangle(kid_i, kid_q, If, Qf, Ff)
-            names.append(f"roach{self.roach_id}_{kid}")
-
-        compressed_resolution = 10000
-        quanta: np.ndarray[float] = ((np.abs(df_data).max() / compressed_resolution)
-                                     * np.ones(len(kids)))
-
-        # add the G3SuperTimestream to the scan frame
-        df_super_timestream = so3g.G3SuperTimestream(names, times, df_data, quanta)
-        frame["df"] = df_super_timestream
+        df_super_timestream = so3g.G3SuperTimestream(kids, times, df_data, quanta)
+        frame[self.out_key] = df_super_timestream
 
 
 def naive_normalize_df(frame, detector_medians=None, detector_stds=None):
