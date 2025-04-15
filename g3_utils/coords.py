@@ -21,7 +21,8 @@ def add_radec_astropy(frame,
                       alt: str="alt",
                       ra: str="ra", dec: str="dec"):
     """
-    Use astropy coordinate transformations to convert az/el --> ra/dec.
+    G3 pipeline module.
+    Uses astropy coordinate transformations to convert az/el --> ra/dec.
 
     :param az: Key for azimuth G3Timestream in scan frame
     :param el: Key for elevation angle G3Timestream in scan frame
@@ -68,6 +69,7 @@ def add_radec_so3g(frame,
                    alt: str="alt",
                    ra: str="ra", dec: str="dec"):
     """
+    G3 pipeline module.
     Use so3g coordinate transformations to convert az/el --> ra/dec.
 
     Telescope location passed into `so3g.proj.CelestialSightLine` is given by the average of

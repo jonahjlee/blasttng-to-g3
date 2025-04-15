@@ -1,8 +1,17 @@
+# ============================================================================ #
+# maps.py
+#
+# Jonah Lee
+#
+# G3 pipeline modules for map-making (binning images, combining maps, etc.)
+# ============================================================================ #
+
 import so3g
 from spt3g import core
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
+import tools
 
 
 rcw_92_min_lat = -77.110
@@ -18,7 +27,33 @@ BLASTTNG_SITE = so3g.proj.EarthlySite(rcw_92_avg_lon, rcw_92_avg_lat, rcw_92_avg
 
 
 class SingleMapBinner:
-    def __init__(self, kid, timestreams="df", ra0=None, dec0=None, xlen=None, ylen=None, res=None):
+    """
+    G3 Pipeline Module.
+    Bins one detector's TOD (time-ordered-data) into a flat sky map with Plate-Carree projection.
+    """
+    def __init__(self,
+                 kid,
+                 timestreams="df",
+                 ra0: float=None, dec0: float=None,
+                 xlen: float=None, ylen: float=None,
+                 res: float=None,
+                 roach: int=None):
+        """
+        Create a new SingleMapBinner.
+
+        :param kid: Identifier for a detector
+            If `kid` is a string, it must match the expression `^roach[1-5]_\d{4}$`, e.g. "roach1_0000"
+            or be parsable as an int or float.
+            If `kid` is (or is parsed as) an int or float, it will be parsed into a string matching the above pattern,
+            and `roach` must be defined.
+        :param timestreams: Key into detector G3SuperTimestream for scan frames
+        :param ra0: G3Units angle - center of map in right ascension
+        :param dec0: G3Units angle - center of map in declination
+        :param xlen: G3Units angle - width of map in right ascension
+        :param ylen: G3Units angle - height of map in declination
+        :param res: G3Units angle - size of map square pixels
+        :param roach: Roach number, used to find detector identifier string if `kid` is an int/float
+        """
         # center of the sky map
         assert ra0 is not None, "must set ra0!"
         assert dec0 is not None, "must set dec0!"
@@ -38,7 +73,7 @@ class SingleMapBinner:
         self.ra_edges = np.linspace(-self.xlen / 2, self.xlen / 2, self.nx + 1) + self.ra0
         self.dec_edges = np.linspace(-self.ylen / 2, self.ylen / 2, self.ny + 1) + self.dec0
 
-        self.kid = kid
+        self.kid = kid if roach is None else tools.kid_string(kid, roach)
         self.timestreams = timestreams
 
         # array for storing the binned timestream data
@@ -48,9 +83,11 @@ class SingleMapBinner:
         self.hits = np.zeros((self.ny, self.nx), dtype=float)
 
     def source_coords(self):
-        """Find source pixel coordinates in this KID's map
+        """
+        Find source pixel coordinates in this KID's map.
+        Applies a gaussian smoothing filter, then finds the location of the brightest pixel.
 
-        Returns: (x, y)
+        :returns: (x, y)
         """
         with np.errstate(invalid='ignore'):
             zz = self.data / self.hits
@@ -64,30 +101,31 @@ class SingleMapBinner:
         max_coords = np.unravel_index(np.argmax(smoothed_array), smoothed_array.shape)
         return max_coords[::-1]
 
-    def plot(self, ax=None):
+    def plot(self, ax=None, show=True):
+        """
+        Plot this SingleMapBinner's map.
+
+        Image data for `matplotlib.pyplot.imshow` is given by `self.data / self.hits`.
+
+        :param ax: Matplotlib axes instance. If None (default), will use plt.gca()
+        :param show: If True (default), calls plt.show() automatically.
+        """
         with np.errstate(invalid='ignore'):
             m = self.data / self.hits
         source_coords = self.source_coords()
-        if ax is not None:
-            ax.imshow(m, origin='lower')
-            ax.set_xticks(range(self.nx + 1)[::10], [f"{ra:.2f}" for ra in self.ra_edges[::10] / core.G3Units.deg],
-                          rotation=45)
-            ax.set_yticks(range(self.ny + 1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / core.G3Units.deg])
-            ax.set_xlabel("Boresight RA (deg)")
-            ax.set_ylabel("Boresight DEC (deg)")
-            ax.set_title(f"{self.kid}")
-            ax.plot(*source_coords, 'ro')
-        else:
-            plt.imshow(m, origin='lower')
-            plt.xticks(range(self.nx + 1)[::10], [f"{ra:.2f}" for ra in self.ra_edges[::10] / core.G3Units.deg],
-                       rotation=45)
-            plt.yticks(range(self.ny + 1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / core.G3Units.deg])
-            plt.colorbar(label="DF")
-            plt.xlabel("Boresight RA (deg)")
-            plt.ylabel("Boresight DEC (deg)")
-            plt.title(f"{self.kid}")
-            plt.plot(*source_coords, 'ro')
-            plt.show()
+
+        if ax is None: ax = plt.gca()
+
+        ax.imshow(m, origin='lower')
+        ax.set_xticks(range(self.nx + 1)[::10], [f"{ra:.2f}" for ra in self.ra_edges[::10] / core.G3Units.deg],
+                      rotation=45)
+        ax.set_yticks(range(self.ny + 1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / core.G3Units.deg])
+        ax.set_xlabel("Boresight RA (deg)")
+        ax.set_ylabel("Boresight DEC (deg)")
+        ax.set_title(f"{self.kid}")
+        ax.plot(*source_coords, 'ro')
+
+        if show: plt.show()
 
     def __call__(self, frame):
         if self.timestreams not in frame:
@@ -108,12 +146,28 @@ class SingleMapBinner:
 
 
 class MapBinner:
-    def __init__(self, timestreams="df", site=None, source_coords=None, ra0=None, dec0=None, xlen=None, ylen=None,
-                 res=None,
+    def __init__(self, timestreams="df", source_coords: dict=None, stds: dict=None,
+                 ra0: float=None, dec0: float=None,
+                 xlen: float=None, ylen: float=None,
+                 res: float=None,
                  select_kids: list[str] = None):
+        """
+        Create a new MapBinner.
+
+        :param timestreams: Key into detector G3SuperTimestream for scan frames
+        :param source_coords: Mapping from detector identifiers (^roach[1-5]_\d{4}$) to source (col, row) pixel coords
+        :param stds: Mapping from detector identifiers (^roach[1-5]_\d{4}$) to detector signal standard deviation.
+                     Detectors are weighted by 1/σ² when combining maps. If `None` (default), weights maps equally.
+        :param ra0: G3Units angle - center of map in right ascension
+        :param dec0: G3Units angle - center of map in declination
+        :param xlen: G3Units angle - width of map in right ascension
+        :param ylen: G3Units angle - height of map in declination
+        :param res: G3Units angle - size of map square pixels
+        :param select_kids: Optional, list of kids to include in combined map. If `None` (default), all kids are included.
+        """
         self.timestreams = timestreams
-        self.site = site if site is not None else BLASTTNG_SITE
         self.source_coords = source_coords
+        self.stds = stds
         assert source_coords is not None, "must set source_coords!"
         assert ra0 is not None, "must set ra0!"
         assert dec0 is not None, "must set dec0!"
@@ -137,17 +191,20 @@ class MapBinner:
         # array for storing the number of times each pixel is "hit" in the timestreams
         self.hits = np.zeros((self.ny, self.nx), dtype=float)
 
-    def _get_kids(self, super_ts) -> list[str]:
+    def _get_kids(self, ts_names: list[str]) -> list[str]:
         """Determine the list of kids which should contribute to the map
 
         Returned KIDs exisit in both:
         - detector timestream data
         - select_kids, if provided
+
+        :param ts_names: List of detector names in G3SuperTimestream
         """
-        if self.select_kids is None: return super_ts.names
-        return list(set(super_ts.names).intersection(set(self.select_kids)))
+        if self.select_kids is None: return ts_names
+        return list(set(ts_names).intersection(set(self.select_kids)))
 
     def __call__(self, frame):
+        """Update MapBinner with a new frame. Called within a G3 pipeline."""
         if self.timestreams not in frame:
             return
 
@@ -159,31 +216,38 @@ class MapBinner:
             kid_timestream_idx = int(np.where(np.asarray(super_ts.names) == kid)[0][0])
             kid_ts = super_ts.data[kid_timestream_idx]
 
-            x = frame["ra"] + (self.source_coords[kid][0] - self.nx / 2) * self.res
-            y = frame["dec"] + (self.source_coords[kid][1] - self.ny / 2) * self.res
+            x = frame["ra"] + (self.nx / 2 - self.source_coords[kid][0]) * self.res
+            y = frame["dec"] + (self.ny / 2 - self.source_coords[kid][1]) * self.res
 
             # update data and hits, in-place
-            self.data += np.histogram2d(y, x, bins=[self.dec_edges, self.ra_edges], weights=kid_ts)[0]
-            self.hits += np.histogram2d(y, x, bins=[self.dec_edges, self.ra_edges])[0]
+            if self.stds is not None:
+                kid_weight = self.stds[kid_timestream_idx] ** -2  # same index as super_ts
+            else:
+                kid_weight = 1
+            kid_data = np.histogram2d(y, x, bins=[self.dec_edges, self.ra_edges], weights=kid_ts)[0] * kid_weight
+            self.data += kid_data
+            kid_hits = np.histogram2d(y, x, bins=[self.dec_edges, self.ra_edges])[0] * kid_weight
+            self.hits += kid_hits
 
-    def plot(self, ax=None):
+    def plot(self, ax=None, show=True):
+        """
+        Plot this MapBinner's map.
+
+        Image data for `matplotlib.pyplot.imshow` is given by `self.data / self.hits`.
+
+        :param ax: Matplotlib axes instance. If None (default), will use plt.gca()
+        :param show: If True (default), calls plt.show() automatically.
+        """
         with np.errstate(invalid='ignore'):
             m = self.data / self.hits
-        if ax is not None:
-            ax.imshow(m, origin='lower')
-            ax.set_xticks(range(self.nx + 1)[::10], [f"{ra:.2f}" for ra in self.ra_edges[::10] / core.G3Units.deg],
-                          rotation=45)
-            ax.set_yticks(range(self.ny + 1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / core.G3Units.deg])
-            ax.set_xlabel("RA (deg)")
-            ax.set_ylabel("DEC (deg)")
-            ax.set_title("Combined Map")
-        else:
-            plt.imshow(m, origin='lower')
-            plt.xticks(range(self.nx + 1)[::10], [f"{ra:.2f}" for ra in self.ra_edges[::10] / core.G3Units.deg],
-                       rotation=45)
-            plt.yticks(range(self.ny + 1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / core.G3Units.deg])
-            plt.colorbar(label="DF")
-            plt.xlabel("RA (deg)")
-            plt.ylabel("DEC (deg)")
-            plt.title("Combined Map")
-            plt.show()
+
+        if ax is None: ax = plt.gca()
+        ax.imshow(m, origin='lower')
+        ax.set_xticks(range(self.nx + 1)[::10], [f"{ra:.2f}" for ra in self.ra_edges[::10] / core.G3Units.deg],
+                      rotation=45)
+        ax.set_yticks(range(self.ny + 1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / core.G3Units.deg])
+        ax.set_xlabel("RA (deg)")
+        ax.set_ylabel("DEC (deg)")
+        ax.set_title("Combined Map")
+
+        if show: plt.show()
