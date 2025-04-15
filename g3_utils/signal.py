@@ -1,14 +1,29 @@
+# ============================================================================ #
+# signal.py
+#
+# Jonah Lee
+#
+# Miscellaneous tools for G3 TOD processing
+# ============================================================================ #
+
 from spt3g import core
 import so3g
 import numpy as np
 
+
 class DetectorStats:
-    """Determine the median and standard deviation for detectors over all scans
+    """
+    G3 pipeline module.
+    Determines the median and standard deviation for detectors over all scans
 
     Stores a `medians` and `stds` attribute, which have shape (n_scans, n_dets)
     """
-
     def __init__(self, data_key: str = "df"):
+        """
+        Instantiate a DetectorStats object
+
+        :param data_key: Key into a G3SuperTimestream for scan frames.
+        """
         self.data_key = data_key
         self.stds = []
         self.medians = []
@@ -22,37 +37,39 @@ class DetectorStats:
 
 
 # used in DF modules below
-def df_IQangle(I, Q, If, Qf, Ff, i_f0=None):
-    '''Calculate df using IQ Angle Method.
+def df_iqangle(I, Q, If, Qf, Ff, i_f_theta=None):
+    """
+    Calculate df using IQ Angle Method.
 
-    I: (1D array of floats) Timestream S21 real component.
-    Q: (1D array of floats) Timestream S21 imaginary component.
-    If: (1D array of floats) Target sweep S21 real component.
-    Qf: (1D array of floats) Target sweep S21 imaginary component.
-    Ff: (1D array of floats) Target sweep S21 frequency axis.
-    '''
+    :param I: (1D array of floats) Timestream S21 real component.
+    :param Q: (1D array of floats) Timestream S21 imaginary component.
+    :param If: (1D array of floats) Target sweep S21 real component.
+    :param Qf: (1D array of floats) Target sweep S21 imaginary component.
+    :param Ff: (1D array of floats) Target sweep S21 frequency axis.
+    :param i_f_theta: Resonant frequency Index
+    """
 
-    if i_f0 is None:  # resonant frequency index
-        i_f0 = np.argmin(np.abs(If + 1j * Qf))
+    if i_f_theta is None:  # resonant frequency index
+        i_f_theta = np.argmin(np.abs(If + 1j * Qf))
 
     cI = (If.max() + If.min()) / 2  # centre of target IQ loop
     cQ = (Qf.max() + Qf.min()) / 2
 
     # target sweep
     If_c, Qf_c = If - cI, Qf - cQ  # shift center to origin
-    θf = np.arctan2(Qf_c, If_c)  # find IQ angles
+    theta_f = np.arctan2(Qf_c, If_c)  # find IQ angles
 
     # observations
     I_c, Q_c = I - cI, Q - cQ  # shift origin
-    θ = np.arctan2(Q_c, I_c)  # find IQ angles
+    theta = np.arctan2(Q_c, I_c)  # find IQ angles
 
     # adjust frequencies for delta from f0
-    Ff0 = Ff - Ff[i_f0]  # center Ff on f0
+    Ff_theta = Ff - Ff[i_f_theta]  # center Ff on f0
 
     # interpolate
-    df = np.interp(θ, θf, Ff0, period=2 * np.pi)
+    df = np.interp(theta, theta_f, Ff_theta, period=2 * np.pi)
 
-    return df / Ff[i_f0]
+    return df / Ff[i_f_theta]
 
 
 def add_cal_lamp_df(frame, roach_id=1, iq_key="data"):
@@ -77,7 +94,7 @@ def add_cal_lamp_df(frame, roach_id=1, iq_key="data"):
 
         # build df tod
         names.append(f"roach{roach_id}_{kid}")
-        df_data[i] = df_IQangle(kid_i, kid_q, If, Qf, Ff)
+        df_data[i] = df_iqangle(kid_i, kid_q, If, Qf, Ff)
 
     times = super_ts.times
     quanta = np.ones(len(kids)) * np.std(df_data) / 10_000
@@ -113,7 +130,7 @@ class AddSingleKidDF:
         Ff = np.array(self.calframe["target_sweeps"][f"roach{self.roach_id}_{self.kid}_F"])
 
         # build df tod
-        df_tod = df_IQangle(kid_i, kid_q, If, Qf, Ff)
+        df_tod = df_iqangle(kid_i, kid_q, If, Qf, Ff)
 
         t_i = frame["data"].times[0]
         t_f = frame["data"].times[-1]
@@ -156,7 +173,7 @@ class AddScanDF:
             Qf = np.array(self.calframe["target_sweeps"][f"roach{self.roach_id}_{kid}_Q"])
             Ff = np.array(self.calframe["target_sweeps"][f"roach{self.roach_id}_{kid}_F"])
             # build df tod and update names/df_data
-            df_data[i] = df_IQangle(kid_i, kid_q, If, Qf, Ff)
+            df_data[i] = df_iqangle(kid_i, kid_q, If, Qf, Ff)
             names.append(f"roach{self.roach_id}_{kid}")
 
         compressed_resolution = 10000
