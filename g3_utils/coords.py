@@ -114,10 +114,10 @@ def add_radec_so3g(frame,
     ra_ts = core.G3Timestream(np.mod(coords[0][:, 0], 2 * np.pi) * gu.rad)
     dec_ts = core.G3Timestream(coords[0][:, 1] * gu.rad)
 
-    ra_ts.start = times[0]
-    ra_ts.stop = times[-1]
-    dec_ts.start = times[0]
-    dec_ts.stop = times[-1]
+    ra_ts.start = frame[az].start
+    ra_ts.stop = frame[az].stop
+    dec_ts.start = frame[az].start
+    dec_ts.stop = frame[az].stop
 
     frame[ra] = ra_ts
     frame[dec] = dec_ts
