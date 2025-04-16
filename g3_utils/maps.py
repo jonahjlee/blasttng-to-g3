@@ -38,7 +38,7 @@ class MapBinner:
         :param select_kids: Optional, list of kids to include in combined map. If `None` (default), all kids are included.
         """
         self.timestreams = timestreams
-        self.source_coords = source_coords
+        self._source_coords = source_coords
         self.stds = stds
         assert source_coords is not None, "must set source_coords!"
         assert ra0 is not None, "must set ra0!"
@@ -88,8 +88,8 @@ class MapBinner:
             kid_timestream_idx = int(np.where(np.asarray(super_ts.names) == kid)[0][0])
             kid_ts = super_ts.data[kid_timestream_idx]
 
-            x = frame["ra"] + (self.nx / 2 - self.source_coords[kid][0]) * self.res
-            y = frame["dec"] + (self.ny / 2 - self.source_coords[kid][1]) * self.res
+            x = frame["ra"] + (self.nx / 2 - self._source_coords[kid][0]) * self.res
+            y = frame["dec"] + (self.ny / 2 - self._source_coords[kid][1]) * self.res
 
             # update data and hits, in-place
             if self.stds is not None:
@@ -167,8 +167,8 @@ class SingleMapBinner(MapBinner):
         self.ny = int(self.ylen / self.res)
 
         # pretend source is in center of kid map so it doesn't get shifted
-        source_coords = {self.kid: (self.nx/2, self.ny/2)}
-        super().__init__(timestreams, source_coords, ra0, dec0, xlen, ylen, res, select_kids=[self.kid,])
+        fake_source_coords = {self.kid: (self.nx/2, self.ny/2)}
+        super().__init__(timestreams, fake_source_coords, ra0, dec0, xlen, ylen, res, select_kids=[self.kid,])
 
     def source_coords(self) -> tuple[int, int]:
         """
