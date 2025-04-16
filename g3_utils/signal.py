@@ -128,34 +128,56 @@ class AddScanDF:
     G3 pipeline module.
     Compute DF (delta-frequency) data for all scan frames.
     """
-    def __init__(self, iq_key="data", target_sweeps_key="target_sweeps", out_key="df"):
-        """
+    def __init__(self,
+                 iq_key="data", target_sweeps_key="target_sweeps", out_key="df",
+                 select_kids: list[str] | tuple[str] | set[str] = None,
+                 exclude_kids: list[str] | tuple[str] | set[str] = None):
+        f"""
         Instantiate an AddScanDF object
 
         :param iq_key: Key to I/Q G3SuperTimestream in scan frame.
         :param target_sweeps_key: Key to calibration sweep G3SuperTimestream in the calibration frame.
         :param out_key: Key to output DF G3SuperTimestream into in scan frame.
+        :param select_kids: If provided, only compute/store DF for kids in select_kids.
+        :param exclude_kids: If provided, do not compute DF for kids in exclude_kids.
+                             If neither select_kids nor exclude_kids are provided, use all detectors.
+                             If both are provided, use set(select_kids) - set(exclude_kids).
         """
-        self.calframe = None
         self.iq_key = iq_key
         self.target_sweeps_key = target_sweeps_key
         self.out_key = out_key
+        self.select_kids = select_kids
+        self.exclude_kids = exclude_kids
+        self.target_sweeps = None
+        self._kid_list = None
+
+    @property
+    def kid_list(self) -> list[str]:
+        """
+        Determine the ordered list of KIDs to output DF for.
+        This determines the `.names` list for the resulting df G3SuperTimestream.
+        """
+        if self._kid_list is not None: return self._kid_list
+        kids = {id_str[:-2] for id_str in self.target_sweeps.keys()}
+        if self.select_kids is not None: kids = kids.intersection(set(self.select_kids))
+        if self.exclude_kids is not None: kids -= set(self.exclude_kids)
+        self._kid_list = list(np.array(kids).sort())
+        return self._kid_list
 
     def __call__(self, frame):
         if frame.type == core.G3FrameType.Calibration:
-            self.calframe = frame
+            self.target_sweeps = frame[self.target_sweeps_key]
         if frame.type != core.G3FrameType.Scan:
             return
 
-        assert self.calframe is not None, "failed to process scan frame: missing prior calibration frame!"
-        target_sweeps = self.calframe[self.target_sweeps_key]
+        assert self.target_sweeps is not None, ("failed to process scan frame: "
+                                                "missing target sweeps from prior calibration frame!")
 
-        kids = list({id_str[:-2] for id_str in target_sweeps.keys()})
         times = frame[self.iq_key].times
-        df_data = compute_df_data(kids, frame[self.iq_key], target_sweeps)
-        quanta = (np.abs(df_data).max() / 10_000) * np.ones(len(kids))
+        df_data = compute_df_data(self.kid_list, frame[self.iq_key], self.target_sweeps)
+        quanta = (np.abs(df_data).max() / 10_000) * np.ones(len(self.kid_list))
 
-        df_super_timestream = so3g.G3SuperTimestream(kids, times, df_data, quanta)
+        df_super_timestream = so3g.G3SuperTimestream(self.kid_list, times, df_data, quanta)
         frame[self.out_key] = df_super_timestream
 
 
