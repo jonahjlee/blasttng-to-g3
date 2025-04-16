@@ -10,7 +10,7 @@ from spt3g import core
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
-import tools
+from . import tools
 
 
 class MapBinner:
@@ -82,7 +82,7 @@ class MapBinner:
 
         super_ts = frame[self.timestreams]
 
-        common_kids = self._get_kids(super_ts)
+        common_kids = self._get_kids(super_ts.names)
 
         for kid in common_kids:
             kid_timestream_idx = int(np.where(np.asarray(super_ts.names) == kid)[0][0])
@@ -195,5 +195,5 @@ class SingleMapBinner(MapBinner):
         # improve the label for single map
         ax.set_xlabel("Boresight RA (deg)")
         ax.set_ylabel("Boresight DEC (deg)")
-        ax.set_title("Map for Single Detector: ", self.kid)
+        ax.set_title("Map for Single Detector: " + self.kid)
         if show: plt.show()
