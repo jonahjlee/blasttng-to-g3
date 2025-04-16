@@ -149,24 +149,24 @@ class AddScanDF:
         self.select_kids = select_kids
         self.exclude_kids = exclude_kids
         self.target_sweeps = None
-        self._kid_list = None
+        self.kid_list = None
 
-    @property
-    def kid_list(self) -> list[str]:
+    def _get_kid_list(self) -> list[str]:
         """
         Determine the ordered list of KIDs to output DF for.
         This determines the `.names` list for the resulting df G3SuperTimestream.
         """
-        if self._kid_list is not None: return self._kid_list
         kids = {id_str[:-2] for id_str in self.target_sweeps.keys()}
-        if self.select_kids is not None: kids = kids.intersection(set(self.select_kids))
-        if self.exclude_kids is not None: kids -= set(self.exclude_kids)
-        self._kid_list = list(np.array(kids).sort())
-        return self._kid_list
+        if self.select_kids is not None:
+            kids = kids.intersection(set(self.select_kids))
+        if self.exclude_kids is not None:
+            kids = kids - set(self.exclude_kids)
+        return sorted(list(kids))
 
     def __call__(self, frame):
         if frame.type == core.G3FrameType.Calibration:
             self.target_sweeps = frame[self.target_sweeps_key]
+            self.kid_list = self._get_kid_list()
         if frame.type != core.G3FrameType.Scan:
             return
 
