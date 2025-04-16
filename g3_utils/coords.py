@@ -111,8 +111,13 @@ def add_radec_so3g(frame,
     )
     coords = csl.coords(so3g.proj.FocalPlane.boresight())
 
-    x = np.mod(coords[0][:, 0], 2 * np.pi) * gu.rad
-    y = coords[0][:, 1] * gu.rad
+    ra_ts = core.G3Timestream(np.mod(coords[0][:, 0], 2 * np.pi) * gu.rad)
+    dec_ts = core.G3Timestream(coords[0][:, 1] * gu.rad)
 
-    frame[ra] = core.G3VectorDouble(x)
-    frame[dec] = core.G3VectorDouble(y)
+    ra_ts.start = times[0]
+    ra_ts.stop = times[-1]
+    dec_ts.start = times[0]
+    dec_ts.stop = times[-1]
+
+    frame[ra] = ra_ts
+    frame[dec] = dec_ts
