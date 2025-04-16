@@ -100,7 +100,14 @@ def compute_df_data(kids: list[str], super_ts, target_sweeps) -> np.ndarray:
     return df_data
 
 
-def add_cal_lamp_df(frame, iq_key: str="cal_lamp_data", target_sweeps_key="target_sweeps", out_key="cal_lamp_df"):
+def add_cal_lamp_df(
+    frame,
+    iq_key: str="cal_lamp_data",
+    target_sweeps_key: str="target_sweeps",
+    out_key: str="cal_lamp_df",
+    select_kids: list[str] | tuple[str] | set[str] = None,
+    exclude_kids: list[str] | tuple[str] | set[str] = None
+):
     """
     G3 pipeline module.
     Compute DF (delta-frequency) for the calibration lamp data stored in the calibration frame.
@@ -114,12 +121,17 @@ def add_cal_lamp_df(frame, iq_key: str="cal_lamp_data", target_sweeps_key="targe
 
     super_ts = frame[iq_key]
 
-    kids = list({id_str[:-2] for id_str in super_ts.names})
+    kids = {id_str[:-2] for id_str in super_ts.names}
+    if select_kids is not None:
+        kids = kids.intersection(set(select_kids))
+    if exclude_kids is not None:
+        kids = kids - set(exclude_kids)
+    kid_list = sorted(list(kids))
     times = super_ts.times
-    df_data = compute_df_data(kids, super_ts, frame[target_sweeps_key])
-    quanta = np.ones(len(kids)) * np.std(df_data) / 10_000
+    df_data = compute_df_data(kid_list, super_ts, frame[target_sweeps_key])
+    quanta = np.ones(len(kid_list)) * np.std(df_data) / 10_000
 
-    df_super_ts = so3g.G3SuperTimestream(kids, times, df_data, quanta)
+    df_super_ts = so3g.G3SuperTimestream(kid_list, times, df_data, quanta)
     frame[out_key] = df_super_ts
 
 
@@ -181,39 +193,6 @@ class AddScanDF:
         frame[self.out_key] = df_super_timestream
 
 
-def naive_normalize_df(frame,
-                       detector_medians: dict[str, float]=None, detector_stds: dict[str, float]=None,
-                       in_key="df", out_key="norm_df"):
-    """
-    G3 pipeline module.
-    Normalizes tods by setting median to zero and stdev to 1
-
-    :param frame: G3FrameObject passed in automatically by pipeline.
-    :param detector_medians: Mapping from detector identifiers (^roach[1-5]_\d{4}$) to detector signal median value.
-    :param detector_stds: Mapping from detector identifiers (^roach[1-5]_\d{4}$) to detector signal standard deviation.
-    :param in_key: Key to input G3SuperTimestream in scan frame.
-    :param out_key: Key to output G3SuperTimestream into in scan frame.
-    """
-    if frame.type != core.G3FrameType.Scan:
-        return
-
-    # data has shape (n_dets, n_samps)
-    data = frame[in_key].data
-    n_dets = data.shape[0]
-
-    data_zeroed = data - detector_medians[:, None]
-    norm_df = data_zeroed / detector_stds[:, None]
-
-    out_super_ts = so3g.G3SuperTimestream(
-        frame[in_key].names,
-        frame[in_key].times,
-        norm_df,
-        np.ones(n_dets) * 0.00001,  # quanta - float resolution when compressed, current val is arbitrary
-    )
-
-    frame[out_key] = out_super_ts
-
-
 class NormalizeDF():
     """
     G3 pipeline module.
@@ -221,7 +200,10 @@ class NormalizeDF():
     """
     def __init__(self, detector_medians=None, in_key="df", out_key="norm_df", cal_df_key="cal_lamp_df"):
         """
-        Instantiate an NormalizeDF module
+        Instantiate an NormalizeDF module.
+
+        Requires that cal lamp df and scan df have the same shape (n_dets, n_samps). If you are filtering detectors
+        using select_kids and/or exclude_kids, make sure that this is consistent between calibration and scan df.
 
         :param detector_medians: Mapping from detector identifiers (^roach[1-5]_\d{4}$) to detector signal median value.
         :param in_key: Key to input G3SuperTimestream in scan frame.
