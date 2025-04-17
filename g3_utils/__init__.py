@@ -7,7 +7,7 @@ from .signal import (DetectorStats, df_iqangle, add_cal_lamp_df, AddScanDF,
 
 __all__ = [
     # coords
-    'add_radec_astropy', 'add_radec_so3g', 'add_radec_spt3g',
+    'add_radec_astropy', 'add_radec_spt3g', 'add_radec_so3g',
 
     # maps
     'SingleMapBinner', 'MapBinner',

@@ -17,30 +17,41 @@ import astropy.units as au
 import numpy as np
 
 
-def get_earthlocation(frame, lat: str, lon: str, alt: str):
+def get_earthlocation(frame, lat: str, lon: str, alt: str, use_middle_loc: bool):
     """Get a vector of astropy EarthLocation objects from a frame
 
     :param frame: G3Frame
     :param lat: Key to G3Timestream of latitude
     :param lon: Key to G3Timestream of longitude
     :param alt: Key to G3Timestream of altitude
+    :param use_middle_loc: Compute a single EarthLocation as the mean of the start and end times.
+                           Improves performance significantly, but reduces precision.
     """
-    lat_deg = np.array(frame[lat]) / gu.deg
-    lon_deg = np.array(frame[lon]) / gu.deg
-    alt_m = np.array(frame[alt]) / gu.m
+    if use_middle_loc:
+        lat_deg = (frame[lat][-1] - frame[lat][0]) / gu.deg
+        lon_deg = (frame[lat][-1] - frame[lat][0]) / gu.deg
+        alt_m = (frame[lat][-1] - frame[lat][0]) / gu.deg
+    else:
+        lat_deg = np.array(frame[lat]) / gu.deg
+        lon_deg = np.array(frame[lon]) / gu.deg
+        alt_m = np.array(frame[alt]) / gu.m
     blasttng_loc = EarthLocation(lat=lat_deg, lon=lon_deg, height=alt_m)
     return blasttng_loc
 
 
-def add_radec_astropy(frame,
-                      az: str="az", el: str="el",
-                      lat: str="lat", lon: str="lon",
-                      alt: str="alt",
-                      ra: str="ra", dec: str="dec"):
+def add_radec_astropy(
+    frame,
+    az: str="az", el: str="el",
+    lat: str="lat", lon: str="lon",
+    alt: str="alt",
+    ra: str="ra", dec: str="dec",
+    use_middle_loc = False
+):
     """
     G3 pipeline module.
     Uses astropy coordinate transformations to convert az/el --> ra/dec.
 
+    :param frame: G3Frame passed in automatically by pipeline
     :param az: Key for azimuth G3Timestream in scan frame
     :param el: Key for elevation angle G3Timestream in scan frame
     :param lat: Key for latitude G3Timestream in scan frame
@@ -48,6 +59,8 @@ def add_radec_astropy(frame,
     :param alt: Key for altitude G3Timestream in scan frame
     :param ra: Key in which to output right ascension G3Timestream in scan frame
     :param dec: Key in which to output declination G3Timestream in scan frame
+    :param use_middle_loc: Compute a single EarthLocation as the mean of the start and end times.
+                           Improves performance significantly, but reduces precision.
     """
     if frame.type != core.G3FrameType.Scan:
         return
@@ -58,7 +71,7 @@ def add_radec_astropy(frame,
     unix_times = np.array(frame[az].times) / gu.s
     times = Time(unix_times, format="unix")
 
-    blasttng_loc = get_earthlocation(frame, lat, lon, alt)
+    blasttng_loc = get_earthlocation(frame, lat, lon, alt, use_middle_loc)
     sky_coords = SkyCoord(alt=el_deg * au.deg,
                           az=az_deg * au.deg,
                           obstime=times,
@@ -78,11 +91,45 @@ def add_radec_astropy(frame,
     frame[dec] = dec_ts
 
 
-def add_radec_so3g(frame,
-                   az: str="az", el: str="el",
-                   lat: str="lat", lon: str="lon",
-                   alt: str="alt",
-                   ra: str="ra", dec: str="dec"):
+def add_radec_spt3g(
+    frame,
+    az: str="az", el: str="el",
+    lat: str="lat", lon: str="lon",
+    alt: str="alt",
+    ra: str="ra", dec: str="dec",
+    use_middle_loc=False
+):
+    """
+    G3 pipeline module.
+    Uses spt3g coordinate transformations to convert az/el --> ra/dec.
+
+    :param frame: G3Frame passed in automatically by pipeline
+    :param az: Key for azimuth G3Timestream in scan frame
+    :param el: Key for elevation angle G3Timestream in scan frame
+    :param lat: Key for latitude G3Timestream in scan frame
+    :param lon: Key for longitude G3Timestream in scan frame
+    :param alt: Key for altitude G3Timestream in scan frame
+    :param ra: Key in which to output right ascension G3Timestream in scan frame
+    :param dec: Key in which to output declination G3Timestream in scan frame
+    :param use_middle_loc: Compute a single EarthLocation as the mean of the start and end times.
+                           Improves performance significantly, but reduces precision.
+    """
+    if frame.type != core.G3FrameType.Scan:
+        return
+
+    blasttng_loc = get_earthlocation(frame, lat, lon, alt, use_middle_loc)
+    ra_ts, dec_ts = maps.convert_azel_to_radec(frame[az], frame[el], blasttng_loc)
+    frame[ra] = ra_ts
+    frame[dec] = dec_ts
+
+
+def add_radec_so3g(
+    frame,
+    az: str="az", el: str="el",
+    lat: str="lat", lon: str="lon",
+    alt: str="alt",
+    ra: str="ra", dec: str="dec"
+):
     """
     G3 pipeline module.
     Use so3g coordinate transformations to convert az/el --> ra/dec.
@@ -94,6 +141,7 @@ def add_radec_so3g(frame,
 
         "This will be off by several arcminutes… but less than a degree. The weather is ignored."
 
+    :param frame: G3Frame passed in automatically by pipeline
     :param az: Key for azimuth G3Timestream in scan frame
     :param el: Key for elevation angle G3Timestream in scan frame
     :param lat: Key for latitude G3Timestream in scan frame
@@ -134,30 +182,3 @@ def add_radec_so3g(frame,
 
     frame[ra] = ra_ts
     frame[dec] = dec_ts
-
-
-def add_radec_spt3g(frame,
-                      az: str="az", el: str="el",
-                      lat: str="lat", lon: str="lon",
-                      alt: str="alt",
-                      ra: str="ra", dec: str="dec"):
-    """
-    G3 pipeline module.
-    Uses spt3g coordinate transformations to convert az/el --> ra/dec.
-
-    :param az: Key for azimuth G3Timestream in scan frame
-    :param el: Key for elevation angle G3Timestream in scan frame
-    :param lat: Key for latitude G3Timestream in scan frame
-    :param lon: Key for longitude G3Timestream in scan frame
-    :param alt: Key for altitude G3Timestream in scan frame
-    :param ra: Key in which to output right ascension G3Timestream in scan frame
-    :param dec: Key in which to output declination G3Timestream in scan frame
-    """
-    if frame.type != core.G3FrameType.Scan:
-        return
-
-    blasttng_loc = get_earthlocation(frame, lat, lon, alt)
-    ra_ts, dec_ts = maps.convert_azel_to_radec(frame[az], frame[el], blasttng_loc)
-    frame[ra] = ra_ts
-    frame[dec] = dec_ts
-
