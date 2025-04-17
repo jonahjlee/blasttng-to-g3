@@ -29,8 +29,8 @@ def get_earthlocation(frame, lat: str, lon: str, alt: str, use_middle_loc: bool)
     """
     if use_middle_loc:
         lat_deg = (frame[lat][-1] - frame[lat][0]) / gu.deg
-        lon_deg = (frame[lat][-1] - frame[lat][0]) / gu.deg
-        alt_m = (frame[lat][-1] - frame[lat][0]) / gu.deg
+        lon_deg = (frame[lon][-1] - frame[lon][0]) / gu.deg
+        alt_m = (frame[alt][-1] - frame[alt][0]) / gu.m
     else:
         lat_deg = np.array(frame[lat]) / gu.deg
         lon_deg = np.array(frame[lon]) / gu.deg
