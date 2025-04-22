@@ -73,7 +73,7 @@ class FrameGenManager(core.G3Module):
     number of None frames until it returns [] and ends processing.
     """
 
-    def __init__(self, data: BlastData, generators=None):
+    def __init__(self, generators=None):
         super().__init__()
         self.generators: list[core.G3Module] = generators if generators is not None else []
         self.generator_idx = 0
@@ -91,6 +91,19 @@ class FrameGenManager(core.G3Module):
             self.generator_idx += 1
 
         return out
+
+
+class ObservationFrameGenerator(core.G3Module):
+    def __init__(self, scan_pass: ScanPass=None):
+        self.obs_num = -1 if scan_pass is None else scan_pass.value
+        self.done = False
+    def Process(self, _):
+        assert not self.done, "Generator should not be called when it is done!"
+
+        out_frame = core.G3Frame(core.G3FrameType.Observation)
+        out_frame['SourceName'] = "RCW92"
+        out_frame['ObservationNumber'] = self.obs_num
+        return out_frame
 
 
 class ScanFrameGenerator(core.G3Module):
