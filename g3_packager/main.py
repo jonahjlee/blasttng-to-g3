@@ -12,6 +12,20 @@ from data_loader import config
 import os
 
 from spt3g import core
+from spt3g import calibration
+
+def add_bolometer_properties(frame, x_shifts="x_shifts", y_shifts="y_shifts", out_key="BolometerProperties"):
+    if frame.type != core.G3FrameType.Calibration:
+        return
+    kids = sorted(frame[x_shifts].keys())
+    bp_map_list = []
+    for kid in kids:
+        bp = calibration.BolometerProperties()
+        bp.physical_name = kid
+        bp.x_offset = frame[x_shifts][kid]
+        bp.y_offset = frame[y_shifts][kid]
+        bp_map_list.append((kid, bp))
+    frame[out_key] = calibration.BolometerPropertiesMap(bp_map_list)
 
 if __name__ == '__main__':
 
@@ -29,6 +43,7 @@ if __name__ == '__main__':
 
     pipe = core.G3Pipeline()
     pipe.Add(frame_gen_manager)
+    pipe.Add(add_bolometer_properties)
     pipe.Add(core.G3Writer, filename=os.path.join(out_dir, 'roach1_pass3.g3'))
 
     pipe.Run()
