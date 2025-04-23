@@ -245,23 +245,15 @@ class CalFrameGenerator(core.G3Module):
         return x_deg_normalized * core.G3Units.deg, y_deg_normalized * core.G3Units.deg
 
     def get_kid_shifts(self) -> tuple[core.G3MapDouble, core.G3MapDouble]:
-        """Return source-determined KID x_shifts and y_shifts."""
-        # initialize some lists with a common KID index
-        kid_ids: list[str] = []
-        kid_x_offsets_um: list[float] = []  # list[x image plane offset in um]
-        kid_y_offsets_um: list[float] = []  # list[y image plane offset in um]
-        for roach_id in self.data.roach_ids:
-            layout_file = os.path.join(os.path.dirname(__file__), "detector_layouts", f"roach{roach_id}_shifts_um.npy")
-            kid_layout: dict[str, tuple[float, float]] = dlib.load_kid_layout(layout_file)
-            for kid, xy in kid_layout.items():
-                kid_ids.append(f"roach{roach_id}_{kid}")
-                kid_x_offsets_um.append(xy[0])
-                kid_y_offsets_um.append(xy[1])
-        kid_x_angluar_offsets, kid_y_angluar_offsets = self.um_to_az_el_offsets(
-            kid_x_offsets_um, kid_y_offsets_um, config.platescale
-        )
-        x_keyvals = list(zip(kid_ids, kid_x_angluar_offsets))
-        y_keyvals = list(zip(kid_ids, kid_y_angluar_offsets))
+        """Return source-determined KID x_shifts and y_shifts.
+
+        Currently only supports roach 1
+        """
+        # note: file currently has only roach1
+        shifts_file = os.path.join(os.path.dirname(__file__), "detector_layouts", f"roach1_shifts_radec.npy")
+        kid_shifts: dict[str, tuple[float, float]] = np.load(shifts_file, allow_pickle=True).item()
+        x_keyvals = [(k, v[0]) for k, v in kid_shifts.items()]
+        y_keyvals = [(k, v[1]) for k, v in kid_shifts.items()]
         return core.G3MapDouble(x_keyvals), core.G3MapDouble(y_keyvals)
 
     def _get_cal_lamp_kid_data(self) -> so3g.G3SuperTimestream:
