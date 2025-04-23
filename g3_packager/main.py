@@ -30,20 +30,6 @@ def add_bolometer_properties(frame, x_shifts="x_shifts", y_shifts="y_shifts", ou
         bp_map_list.append((kid, bp))
     frame[out_key] = calibration.BolometerPropertiesMap(bp_map_list)
 
-class GetFocalPlane:
-    def __init__(self, x_shifts="x_shifts", y_shifts="y_shifts", out_key="BolometerProperties"):
-        self.x_shifts = x_shifts
-        self.y_shifts = y_shifts
-        self.out_key = out_key
-        self.focalplane = None
-
-    def __call__(self, frame):
-        if frame.type != core.G3FrameType.Calibration:
-            return
-        idxs = np.argsort(frame[self.x_shifts].keys())
-        frame[self.x_shifts].values())
-        proj.FocalPlane.from_xieta()
-        frame[self.out_key] = calibration.BolometerPropertiesMap(bp_map_list)
 
 if __name__ == '__main__':
 
