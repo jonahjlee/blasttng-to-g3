@@ -103,6 +103,8 @@ class ObservationFrameGenerator(core.G3Module):
         out_frame = core.G3Frame(core.G3FrameType.Observation)
         out_frame['SourceName'] = "RCW92"
         out_frame['ObservationNumber'] = self.obs_num
+
+        self.done = True
         return out_frame
 
 
