@@ -76,7 +76,7 @@ class MapBinner:
         return list(set(ts_names).intersection(set(self.select_kids)))
 
     def _get_source_coords(self):
-        if self._source_coords is None:
+        if self._source_coords is not None:
             return self._source_coords
         source_coords = {}
         kids = np.sort(self.calframe["x_shifts"].keys())
