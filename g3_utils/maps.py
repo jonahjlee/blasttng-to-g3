@@ -25,7 +25,6 @@ class MapBinner:
                  stds: dict=None, select_kids: list[str] = None):
         """
         Create a new MapBinner.
-
         :param timestreams: Key into detector G3SuperTimestream for scan frames
         :param source_coords: Mapping from detector identifiers (^roach[1-5]_\d{4}$) to source (col, row) pixel coords
         :param ra0: G3Units angle - center of map in right ascension
@@ -38,9 +37,8 @@ class MapBinner:
         :param select_kids: Optional, list of kids to include in combined map. If `None` (default), all kids are included.
         """
         self.timestreams = timestreams
-        self._source_coords = source_coords
+        self._source_coords: dict[str, tuple[int, int]] | None = source_coords
         self.stds = stds
-        assert source_coords is not None, "must set source_coords!"
         assert ra0 is not None, "must set ra0!"
         assert dec0 is not None, "must set dec0!"
 
@@ -57,6 +55,8 @@ class MapBinner:
         self.dec_edges = np.linspace(-self.ylen / 2, self.ylen / 2, self.ny + 1) + self.dec0
 
         self.select_kids = select_kids
+
+        self.calframe = None
 
         # array for storing the binned timestream data
         self.data = np.zeros((self.ny, self.nx), dtype=float)
@@ -75,8 +75,23 @@ class MapBinner:
         if self.select_kids is None: return ts_names
         return list(set(ts_names).intersection(set(self.select_kids)))
 
+    def _get_source_coords(self):
+        if self._source_coords is None:
+            return self._source_coords
+        source_coords = {}
+        kids = np.sort(self.calframe["x_shifts"].keys())
+        for kid in kids:
+            source_coords[kid] = (
+                self.calframe["x_shifts"][kid] / self.res,
+                self.calframe["y_shifts"][kid] / self.res
+            )
+        self._source_coords = source_coords
+        return source_coords
+
     def __call__(self, frame):
         """Update MapBinner with a new frame. Called within a G3 pipeline."""
+        if frame.type == core.G3FrameType.Calibration:
+            self.calframe = frame
         if self.timestreams not in frame:
             return
 
@@ -84,12 +99,15 @@ class MapBinner:
 
         common_kids = self._get_kids(super_ts.names)
 
+        source_coords = self._get_source_coords()
+
         for kid in common_kids:
             kid_timestream_idx = int(np.where(np.asarray(super_ts.names) == kid)[0][0])
             kid_ts = super_ts.data[kid_timestream_idx]
 
-            x = frame["ra"] + (self.nx / 2 - self._source_coords[kid][0]) * self.res
-            y = frame["dec"] + (self.ny / 2 - self._source_coords[kid][1]) * self.res
+
+            x = frame["ra"] + (self.nx / 2 - source_coords[kid][0]) * self.res
+            y = frame["dec"] + (self.ny / 2 - source_coords[kid][1]) * self.res
 
             # update data and hits, in-place
             if self.stds is not None:
