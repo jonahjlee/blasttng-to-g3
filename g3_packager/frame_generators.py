@@ -23,7 +23,7 @@ class BlastData:
         self.roaches: dict[int, RoachPass] = self._load_roaches()
 
     def _load_roaches(self):
-        """Loads a RoachPass objet for each Roach ID in self.roach_ids
+        """Loads a RoachPass object for each Roach ID in self.roach_ids
 
         Loads all 3 passes by default
         """
@@ -40,13 +40,13 @@ class BlastData:
     def get_elevation(self, roach_id) -> np.ndarray:
         return self.roaches[roach_id].dat_sliced['el'] * core.G3Units.deg
 
-    def get_latitude(self, roach_id)  -> np.ndarray:
+    def get_latitude(self, roach_id) -> np.ndarray:
         return self.roaches[roach_id].dat_sliced['lat'] * core.G3Units.deg
 
-    def get_longitude(self, roach_id)  -> np.ndarray:
+    def get_longitude(self, roach_id) -> np.ndarray:
         return self.roaches[roach_id].dat_sliced['lon'] * core.G3Units.deg
 
-    def get_altitude(self, roach_id)  -> np.ndarray:
+    def get_altitude(self, roach_id) -> np.ndarray:
         return self.roaches[roach_id].dat_sliced['alt'] * core.G3Units.m
 
     def get_kid_i(self, roach_id, kid) -> np.ndarray:
@@ -103,8 +103,6 @@ class ObservationFrameGenerator(core.G3Module):
         out_frame = core.G3Frame(core.G3FrameType.Observation)
         out_frame['SourceName'] = "RCW92"
         out_frame['ObservationNumber'] = self.obs_num
-
-        self.done = True
         return out_frame
 
 
