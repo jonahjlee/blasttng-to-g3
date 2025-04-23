@@ -11,9 +11,6 @@ from data_loader.roach import ScanPass
 from data_loader import config
 import os
 
-from so3g import proj
-import numpy as np
-
 from spt3g import core
 from spt3g import calibration
 
