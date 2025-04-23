@@ -35,11 +35,20 @@ sufficient for our mapmaking purposes.
 
 ### 2. Observation Frames
 
-TBD
+Observation frames take the form exemplified in the [spt3g docs](https://cmb-s4.github.io/spt3g_software/frames.html#observation).
+The ``"SourceName"`` field for all BLAST-TNG G3 files will simply be ``"RCW92"``, and the observation number is
+the numerical value of the ``ScanPass`` enum used to define the period of data.
+
+One observation frame is inserted with every file.
 
 ### 3. Calibration Frames
 
-TBD
+Calibration frames contain data needed to:
+- compute detector DF (delta-frequency)
+- normalize detector timestreams
+- map detector pointing relative to the master pointing
+
+One calibration frame is inserted with every file.
 
 ### 4. Misc
 - [PipelineInfo](https://cmb-s4.github.io/spt3g_software/frames.html#pipelineinfo) Frames
