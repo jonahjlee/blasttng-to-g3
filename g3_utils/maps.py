@@ -147,7 +147,7 @@ class MapBinner:
         if show: plt.show()
 
 
-class SingleMapBinner:
+class SingleMapBinner(MapBinner):
     """
     G3 Pipeline Module.
     Bins one detector's TOD (time-ordered-data) into a flat sky map with Plate-Carree projection
