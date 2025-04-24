@@ -184,7 +184,7 @@ class SingleMapBinner(MapBinner):
 
         # pretend source is in center of kid map so it doesn't get shifted
         fake_source_coords = {self.kid: (self.nx/2, self.ny/2)}
-        super().__init__(timestreams, fake_source_coords, ra0, dec0, xlen, ylen, res, select_kids=[self.kid,])
+        super().__init__(timestreams, ra0, dec0, xlen, ylen, res, select_kids=[self.kid,])
 
     def source_coords(self) -> tuple[int, int]:
         """
