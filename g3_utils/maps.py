@@ -19,14 +19,13 @@ class MapBinner:
     Bins detectors' TODs (time-ordered-data) into a flat sky map with Plate-Carree projection,
     combining signal from multiple detectors.
     """
-    def __init__(self, timestreams="df", source_coords: dict=None,
+    def __init__(self, timestreams="df",
                  ra0: float=None, dec0: float=None,
                  xlen: float=None, ylen: float=None, res: float=None,
                  stds: dict=None, select_kids: list[str] = None):
         """
         Create a new MapBinner.
         :param timestreams: Key into detector G3SuperTimestream for scan frames
-        :param source_coords: Mapping from detector identifiers (^roach[1-5]_\d{4}$) to source (col, row) pixel coords
         :param ra0: G3Units angle - center of map in right ascension
         :param dec0: G3Units angle - center of map in declination
         :param xlen: G3Units angle - width of map in right ascension
@@ -37,7 +36,6 @@ class MapBinner:
         :param select_kids: Optional, list of kids to include in combined map. If `None` (default), all kids are included.
         """
         self.timestreams = timestreams
-        self._source_coords: dict[str, tuple[int, int]] | None = source_coords
         self.stds = stds
         assert ra0 is not None, "must set ra0!"
         assert dec0 is not None, "must set dec0!"
@@ -57,6 +55,7 @@ class MapBinner:
         self.select_kids = select_kids
 
         self.calframe = None
+        self._kid_shifts = None
 
         # array for storing the binned timestream data
         self.data = np.zeros((self.ny, self.nx), dtype=float)
@@ -75,18 +74,18 @@ class MapBinner:
         if self.select_kids is None: return ts_names
         return list(set(ts_names).intersection(set(self.select_kids)))
 
-    def _get_source_coords(self):
-        if self._source_coords is not None:
-            return self._source_coords
-        source_coords = {}
+    def _get_kid_shifts(self):
+        if self._kid_shifts is not None:
+            return self._kid_shifts
+        kid_shifts = {}
         kids = np.sort(self.calframe["x_shifts"].keys())
         for kid in kids:
-            source_coords[kid] = (
-                self.calframe["x_shifts"][kid] / self.res,
-                self.calframe["y_shifts"][kid] / self.res
+            kid_shifts[kid] = (
+                self.calframe["x_shifts"][kid],
+                self.calframe["y_shifts"][kid],
             )
-        self._source_coords = source_coords
-        return source_coords
+        self._kid_shifts = kid_shifts
+        return kid_shifts
 
     def __call__(self, frame):
         """Update MapBinner with a new frame. Called within a G3 pipeline."""
@@ -99,15 +98,14 @@ class MapBinner:
 
         common_kids = self._get_kids(super_ts.names)
 
-        source_coords = self._get_source_coords()
+        kid_shifts = self._get_kid_shifts()
 
         for kid in common_kids:
             kid_timestream_idx = int(np.where(np.asarray(super_ts.names) == kid)[0][0])
             kid_ts = super_ts.data[kid_timestream_idx]
 
-
-            x = frame["ra"] + (self.nx / 2 - source_coords[kid][0]) * self.res
-            y = frame["dec"] + (self.ny / 2 - source_coords[kid][1]) * self.res
+            x = frame["ra"] + kid_shifts[kid][0]
+            y = frame["dec"] + kid_shifts[kid][1]
 
             # update data and hits, in-place
             if self.stds is not None:
