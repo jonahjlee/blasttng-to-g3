@@ -22,7 +22,8 @@ class MapBinner:
     def __init__(self, timestreams="df",
                  ra0: float=None, dec0: float=None,
                  xlen: float=None, ylen: float=None, res: float=None,
-                 stds: dict=None, select_kids: list[str] = None):
+                 stds: dict=None, select_kids: list[str] = None,
+                 shift_kids: bool = True):
         """
         Create a new MapBinner.
         :param timestreams: Key into detector G3SuperTimestream for scan frames
@@ -56,6 +57,8 @@ class MapBinner:
 
         self.calframe = None
         self._kid_shifts = None
+
+        self.shift_kids = shift_kids
 
         # array for storing the binned timestream data
         self.data = np.zeros((self.ny, self.nx), dtype=float)
@@ -104,8 +107,11 @@ class MapBinner:
             kid_timestream_idx = int(np.where(np.asarray(super_ts.names) == kid)[0][0])
             kid_ts = super_ts.data[kid_timestream_idx]
 
-            x = frame["ra"] + kid_shifts[kid][0]
-            y = frame["dec"] + kid_shifts[kid][1]
+            x = frame["ra"]
+            y = frame["dec"]
+            if self.shift_kids:
+                x += kid_shifts[kid][0]
+                y += kid_shifts[kid][1]
 
             # update data and hits, in-place
             if self.stds is not None:
@@ -141,7 +147,7 @@ class MapBinner:
         if show: plt.show()
 
 
-class SingleMapBinner(MapBinner):
+class SingleMapBinner:
     """
     G3 Pipeline Module.
     Bins one detector's TOD (time-ordered-data) into a flat sky map with Plate-Carree projection
@@ -182,9 +188,7 @@ class SingleMapBinner(MapBinner):
         self.nx = int(self.xlen / self.res)
         self.ny = int(self.ylen / self.res)
 
-        # pretend source is in center of kid map so it doesn't get shifted
-        fake_source_coords = {self.kid: (self.nx/2, self.ny/2)}
-        super().__init__(timestreams, ra0, dec0, xlen, ylen, res, select_kids=[self.kid,])
+        super().__init__(timestreams, ra0, dec0, xlen, ylen, res, select_kids=[self.kid,], shift_kids=False)
 
     def source_coords(self) -> tuple[int, int]:
         """
