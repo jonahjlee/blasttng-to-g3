@@ -137,14 +137,16 @@ class MapBinner:
 
         if ax is None: ax = plt.gca()
         ax.imshow(m, origin='lower')
-        ax.set_xticks(range(self.nx + 1)[::10], [f"{ra:.2f}" for ra in self.ra_edges[::10] / core.G3Units.deg],
+        skip_interval_x = self.nx // 10
+        skip_interval_y = self.ny // 10
+        ax.set_xticks(range(self.nx + 1)[::skip_interval_x],
+                      [f"{ra:.2f}" for ra in self.ra_edges[::skip_interval_x] / core.G3Units.deg],
                       rotation=45)
-        ax.set_yticks(range(self.ny + 1)[::10], [f"{dec:.2f}" for dec in self.dec_edges[::10] / core.G3Units.deg])
+        ax.set_yticks(range(self.ny + 1)[::skip_interval_y],
+                      [f"{dec:.2f}" for dec in self.dec_edges[::skip_interval_y] / core.G3Units.deg])
         ax.set_xlabel("RA (deg)")
         ax.set_ylabel("DEC (deg)")
         ax.set_title("Combined Map")
-
-        if show: plt.show()
 
 
 class SingleMapBinner(MapBinner):
