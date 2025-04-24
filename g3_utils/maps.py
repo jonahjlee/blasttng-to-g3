@@ -77,7 +77,14 @@ class MapBinner:
         if self.select_kids is None: return ts_names
         return list(set(ts_names).intersection(set(self.select_kids)))
 
-    def _get_kid_shifts(self):
+    @property
+    def kid_shifts(self) -> dict[str, tuple[float, float]]:
+        """
+        Get the KID shift dictionary for this MapBinner.
+        Maps KID strings (e.g. "roach1_0000" to (ra, dec) offset tuples in G3 angular units.
+
+        Note: the dictionary is not copied, so beware when mutating it.
+        """
         if self._kid_shifts is not None:
             return self._kid_shifts
         kid_shifts = {}
@@ -101,8 +108,6 @@ class MapBinner:
 
         common_kids = self._get_kids(super_ts.names)
 
-        kid_shifts = self._get_kid_shifts()
-
         for kid in common_kids:
             kid_timestream_idx = int(np.where(np.asarray(super_ts.names) == kid)[0][0])
             kid_ts = super_ts.data[kid_timestream_idx]
@@ -110,8 +115,8 @@ class MapBinner:
             x = np.array(frame["ra"])
             y = np.array(frame["dec"])
             if self.shift_kids:
-                x += kid_shifts[kid][0]
-                y += kid_shifts[kid][1]
+                x += self.kid_shifts[kid][0]
+                y += self.kid_shifts[kid][1]
 
             # update data and hits, in-place
             if self.stds is not None:
