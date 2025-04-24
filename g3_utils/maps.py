@@ -22,7 +22,8 @@ class MapBinner:
     def __init__(self, timestreams="df",
                  ra0: float=None, dec0: float=None,
                  xlen: float=None, ylen: float=None, res: float=None,
-                 stds: dict=None, select_kids: list[str] = None,
+                 stds: dict=None,
+                 select_kids: list[str] = None, exclude_kids: list[str] = None,
                  shift_kids: bool = True):
         """
         Create a new MapBinner.
@@ -35,6 +36,9 @@ class MapBinner:
         :param stds: Mapping from detector identifiers (^roach[1-5]_\d{4}$) to detector signal standard deviation.
                      Detectors are weighted by 1/σ² when combining maps. If `None` (default), weights maps equally.
         :param select_kids: Optional, list of kids to include in combined map. If `None` (default), all kids are included.
+        :param exclude_kids: Optional, list of kids to exclude form combined map. If `None` (default), no kids are excluded.
+                             Note: If both select_kids and exclude_kids are provided, uses only KIDs that are in
+                             select_kids and not in exclude_kids.
         """
         self.timestreams = timestreams
         self.stds = stds
@@ -54,6 +58,7 @@ class MapBinner:
         self.dec_edges = np.linspace(-self.ylen / 2, self.ylen / 2, self.ny + 1) + self.dec0
 
         self.select_kids = select_kids
+        self.exclude_kids = exclude_kids
 
         self.calframe = None
         self._kid_shifts = None
@@ -74,8 +79,12 @@ class MapBinner:
 
         :param ts_names: List of detector names in G3SuperTimestream
         """
-        if self.select_kids is None: return ts_names
-        return list(set(ts_names).intersection(set(self.select_kids)))
+        kids =  set(ts_names)
+        if self.select_kids is not None:
+            kids = kids.intersection(set(self.select_kids))
+        if self.exclude_kids is not None:
+            kids = kids - set(self.exclude_kids)
+        return list(kids)
 
     @property
     def kid_shifts(self) -> dict[str, tuple[float, float]]:
