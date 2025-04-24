@@ -280,3 +280,51 @@ def remove_common_mode(frame, in_key="df", out_key="df_ctremoved", ct_key=None):
     # store the calibrated timestreams to the output key in the frame
     frame[out_key] = df_ctremoved
     if ct_key is not None: frame[ct_key] = common_mode
+
+
+def azelToMapPix(az, el, x_edges, y_edges):
+    '''Convert az/el coords to map pix coords.
+
+    az/el: (1D array of floats) Array of az/el coordinates.
+    x_edges/y_edges: (1D array of floats) The map az/el bin edges.
+    '''
+    indices_x = np.searchsorted(x_edges, az, side='right') - 1
+    indices_y = np.searchsorted(y_edges, el, side='right') - 1
+    # Correct the indices if they go out of bounds
+    indices_x = np.clip(indices_x, 0, len(x_edges) - 2)
+    indices_y = np.clip(indices_y, 0, len(y_edges) - 2)
+
+    return indices_x, indices_y
+
+
+def common_mode_iter(frame, in_key="df_ctremoved", out_key="df_iterated", kid_shifts=None,
+                     prev_map=None, ra0=None, dec0=None, xlen=None, ylen=None, res=None):
+    if frame.type != core.G3FrameType.Scan:
+        return
+
+    assert kid_shifts is not None, ("kid_shifts is required for common_mode_iter.\n"
+                                    "It can be obtained from the previous MapBinner's kid_shifts property")
+
+    # figure out bins
+    nx = int(xlen / res)
+    ny = int(ylen / res)
+    ra_edges = np.linspace(-xlen / 2, xlen / 2, nx + 1) + ra0
+    dec_edges = np.linspace(-ylen / 2, ylen / 2, ny + 1) + dec0
+
+    # get astronomical signal tod estimate from map for each kid
+    ast_signal_estimate = np.zeros_like(frame[in_key].data)
+    for i, kid in enumerate(frame[in_key].names):
+        x = frame["ra"] + kid_shifts[kid][0]
+        y = frame["dec"] + kid_shifts[kid][1]
+        indices_x, indices_y = azelToMapPix(x, y, ra_edges, dec_edges)
+        ast_signal_estimate[i] = prev_map[indices_y, indices_x]
+    common_mode = np.nanmean(frame[in_key].data - ast_signal_estimate, axis=0)
+    # plt.imshow(ast_signal_estimate); plt.title("est. ast.") ;plt.show();
+    # plt.plot(common_mode); plt.title("ct it 2") ;plt.show();
+    ct_removed = frame[in_key].data - common_mode[None, :]
+
+    super_ts = so3g.G3SuperTimestream(frame[in_key].names,
+                                      frame[in_key].times,
+                                      ct_removed,
+                                      frame[in_key].quanta)
+    frame[out_key] = super_ts

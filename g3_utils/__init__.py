@@ -3,7 +3,7 @@ from .maps import SingleMapBinner, MapBinner
 from .tools import (kid_string, FrameCounter, NthFrameGrabber, FirstFrameGrabber,
                     LastFrameGrabber, PlotRaDec, GenericPlotter, TimestreamPlotter)
 from .signal import (DetectorStats, df_iqangle, add_cal_lamp_df, AddScanDF,
-                     NormalizeDF, remove_common_mode)
+                     NormalizeDF, remove_common_mode, common_mode_iter)
 
 __all__ = [
     # coords
@@ -18,5 +18,5 @@ __all__ = [
 
     # signal
     'DetectorStats', 'df_iqangle', 'add_cal_lamp_df', 'AddScanDF',
-    'NormalizeDF', 'remove_common_mode'
+    'NormalizeDF', 'remove_common_mode', 'common_mode_iter'
 ]
