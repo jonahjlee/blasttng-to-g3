@@ -113,8 +113,13 @@ def add_cal_lamp_df(
     Compute DF (delta-frequency) for the calibration lamp data stored in the calibration frame.
 
     :param frame: G3FrameObject passed in automatically by pipeline.
+    :param target_sweeps_key: Key to target sweeps G3SuperTimestream in calibration frame.
     :param iq_key: Key to I/Q G3SuperTimestream in calibration frame.
     :param out_key: Key to output DF G3SuperTimestream into in calibration frame.
+    :param select_kids: Optional, list of kids to include in combined map. If `None` (default), all kids are included.
+    :param exclude_kids: Optional, list of kids to exclude form combined map. If `None` (default), no kids are excluded.
+                         Note: If both select_kids and exclude_kids are provided, uses only KIDs that are in
+                         select_kids and not in exclude_kids.
     """
     if frame.type != core.G3FrameType.Calibration:
         return
