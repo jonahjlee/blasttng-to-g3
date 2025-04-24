@@ -85,6 +85,8 @@ class FrameGenManager(core.G3Module):
             return []
 
         active_generator = self.generators[self.generator_idx]
+        print("adding a frame...")
+        print(f"{active_generator=}")
         out = active_generator.Process(frame)
 
         if active_generator.done:
