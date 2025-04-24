@@ -107,11 +107,11 @@ class MapBinner:
             kid_timestream_idx = int(np.where(np.asarray(super_ts.names) == kid)[0][0])
             kid_ts = super_ts.data[kid_timestream_idx]
 
-            x = frame["ra"]
-            y = frame["dec"]
+            x = np.array(frame["ra"])
+            y = np.array(frame["dec"])
             if self.shift_kids:
-                x += kid_shifts[kid][0]
-                y += kid_shifts[kid][1]
+                x += np.array(kid_shifts[kid][0])
+                y += np.array(kid_shifts[kid][1])
 
             # update data and hits, in-place
             if self.stds is not None:
