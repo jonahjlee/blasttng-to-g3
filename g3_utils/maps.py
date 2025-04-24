@@ -110,8 +110,8 @@ class MapBinner:
             x = np.array(frame["ra"])
             y = np.array(frame["dec"])
             if self.shift_kids:
-                x += np.array(kid_shifts[kid][0])
-                y += np.array(kid_shifts[kid][1])
+                x += kid_shifts[kid][0]
+                y += kid_shifts[kid][1]
 
             # update data and hits, in-place
             if self.stds is not None:
