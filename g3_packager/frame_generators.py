@@ -85,8 +85,7 @@ class FrameGenManager(core.G3Module):
             return []
 
         active_generator = self.generators[self.generator_idx]
-        print("adding a frame...")
-        print(f"{active_generator=}")
+        print(f"Adding a frame. {active_generator=}")
         out = active_generator.Process(frame)
 
         if active_generator.done:
@@ -249,7 +248,7 @@ class CalFrameGenerator(core.G3Module):
         return x_deg_normalized * core.G3Units.deg, y_deg_normalized * core.G3Units.deg
 
     def get_kid_shifts(self) -> tuple[core.G3MapDouble, core.G3MapDouble]:
-        """Return source-determined KID x_shifts and y_shifts.
+        """Return source-determined KID ra_shifts and dec_shifts.
 
         Currently only supports roach 1
         """
@@ -282,9 +281,9 @@ class CalFrameGenerator(core.G3Module):
         out_frame = core.G3Frame(core.G3FrameType.Calibration)
 
         out_frame["target_sweeps"] = self.get_target_sweeps()
-        x_shifts, y_shifts = self.get_kid_shifts()
-        out_frame["x_shifts"] = x_shifts
-        out_frame["y_shifts"] = y_shifts
+        ra_shifts, dec_shifts = self.get_kid_shifts()
+        out_frame["ra_shifts"] = ra_shifts
+        out_frame["dec_shifts"] = dec_shifts
         out_frame["cal_lamp_data"] = self._get_cal_lamp_kid_data()
 
         self.done = True

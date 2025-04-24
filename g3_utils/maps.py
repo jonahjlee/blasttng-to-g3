@@ -78,11 +78,11 @@ class MapBinner:
         if self._kid_shifts is not None:
             return self._kid_shifts
         kid_shifts = {}
-        kids = np.sort(self.calframe["x_shifts"].keys())
+        kids = np.sort(self.calframe["ra_shifts"].keys())
         for kid in kids:
             kid_shifts[kid] = (
-                self.calframe["x_shifts"][kid],
-                self.calframe["y_shifts"][kid],
+                self.calframe["ra_shifts"][kid],
+                self.calframe["dec_shifts"][kid],
             )
         self._kid_shifts = kid_shifts
         return kid_shifts
