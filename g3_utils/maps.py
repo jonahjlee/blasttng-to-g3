@@ -70,7 +70,7 @@ class MapBinner:
         # array for storing the number of times each pixel is "hit" in the timestreams
         self.hits = np.zeros((self.ny, self.nx), dtype=float)
 
-    def _get_kids(self, ts_names: list[str]) -> list[str]:
+    def get_kids(self, ts_names: list[str]) -> list[str]:
         """Determine the list of kids which should contribute to the map
 
         Returned KIDs exisit in both:
@@ -115,7 +115,7 @@ class MapBinner:
 
         super_ts = frame[self.timestreams]
 
-        common_kids = self._get_kids(super_ts.names)
+        common_kids = self.get_kids(super_ts.names)
 
         for kid in common_kids:
             kid_timestream_idx = int(np.where(np.asarray(super_ts.names) == kid)[0][0])
