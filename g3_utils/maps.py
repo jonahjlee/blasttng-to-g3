@@ -65,12 +65,14 @@ class MapBinner:
 
         self.shift_kids = shift_kids
 
+        self.kids = None
+
         # array for storing the binned timestream data
         self.data = np.zeros((self.ny, self.nx), dtype=float)
         # array for storing the number of times each pixel is "hit" in the timestreams
         self.hits = np.zeros((self.ny, self.nx), dtype=float)
 
-    def get_kids(self, ts_names: list[str]) -> list[str]:
+    def _get_kids(self, ts_names: list[str]) -> list[str]:
         """Determine the list of kids which should contribute to the map
 
         Returned KIDs exisit in both:
@@ -115,9 +117,10 @@ class MapBinner:
 
         super_ts = frame[self.timestreams]
 
-        common_kids = self.get_kids(super_ts.names)
+        if self.kids is None:
+            self.kids = self._get_kids(super_ts.names)
 
-        for kid in common_kids:
+        for kid in self.kids:
             kid_timestream_idx = int(np.where(np.asarray(super_ts.names) == kid)[0][0])
             kid_ts = super_ts.data[kid_timestream_idx]
 
