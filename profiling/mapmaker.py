@@ -13,7 +13,7 @@ from astropy.coordinates import SkyCoord
 control_computer_g3_dir = pathlib.Path("/media/player1/blast2020fc1/blasttng_g3")
 roach1_pass3_file = control_computer_g3_dir / "testing/roach1_pass3.g3"
 
-num_iters = 2
+num_iters = 0
 
 # lambda to get filenames under which to store pipeline outputs at each iteration
 iter_file = lambda i: str(control_computer_g3_dir / f"mapmaking/pipeline/stage{i}.g3")
@@ -108,12 +108,27 @@ if __name__ == "__main__":
 
     end_time = time.perf_counter()
 
-    print(f"\nTotal Time: {end_time - start_time}")
-
     # ============================================================================ #
-    # SAVE THE RESULTING MAP
+    # OUTPUT
     # ============================================================================ #
 
+    # determine the duration of the scan data
+    ffg = ut.FirstFrameGrabber(core.G3FrameType.Scan)
+    lfg = ut.LastFrameGrabber(core.G3FrameType.Scan)
+    pipe = core.G3Pipeline()
+    pipe.Add(core.G3Reader, filename=str(roach1_pass3_file))
+    pipe.Add(ffg)
+    pipe.Add(lfg)
+    pipe.Run()
+    scan_duration = (lfg.last_frame["az"].stop.time - ffg.first_frame["az"].start.time) / core.G3Units.s
+
+    # print out some stats for the map making run
+    print("\nCreated a map with:")
+    print(f"    {len(prev_binner.kids)} detectors")
+    print(f"    {scan_duration}s of data.")
+    print(f"    {num_iters} commmon-mode iterations (+1 naive iteration at the start)")
+    print(f"Total Time: {end_time - start_time}s")
+
+    # save the map (comment this out if this is unwanted)
     prev_binner.plot(show=False)
     plt.savefig(pathlib.Path(__file__).parent / 'map.png')
-
