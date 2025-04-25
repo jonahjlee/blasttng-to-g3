@@ -35,3 +35,15 @@ In its current state, ``map_maker_iterative`` accesses the (large volume of) BLA
 - Provide adequate documentation (slides, READMEs, code comments, docstrings…) such that somebody in the future can:
   - Create new .g3 files with different data
   - Understand the format of the existing BLAST-TNG .g3 files and work with them
+
+## Project Structure
+
+The ``g3_packager`` module is responsible for generating the G3 files, and is intended to be run on the CCAT Control computer.
+Running ``main.py`` will read the data required using the ``data_loader`` package and create a new G3 file for the data.
+
+The ``data_loader`` package consists of parts of code adapted from [map_making_blasttng_jl](https://github.com/jonahjlee/map_making_blasttng_jl) that are required
+to load (and minimally process) BLAST-TNG data.
+
+This project also contains a map-maker that effectively ports the functionality from [map_making_blasttng_jl](https://github.com/jonahjlee/map_making_blasttng_jl) to
+make maps using G3 pipelines. The main script is in ``profiling/mapmaker.py``. The output from ``mapmaker.py`` is given
+by the quotient ``binner.data / binner.hits`` for the binner which took in the  most recently processed data.
