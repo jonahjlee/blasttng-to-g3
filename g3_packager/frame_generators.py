@@ -288,3 +288,14 @@ class CalFrameGenerator(core.G3Module):
 
         self.done = True
         return out_frame  # insert the calframe into the pipeline
+
+
+class DummyScanFrameGenerator(core.G3Module):
+    """Generates random scan data at a given sample rate, detector count, scan period...
+
+    Would be useful for testing performance of map-maker.
+    """
+    def __init__(self, sample_rate: float, detector_count: int, scan_period: float, num_scans: float):
+        ...
+    def Process(self, frame):
+        ... # let's say this is an exercise for the reader...
